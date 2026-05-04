@@ -1,0 +1,71 @@
+name: Extract ZIP source to root
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/extract-zip-source.yml
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract ZIP source
+        run: |
+          set -e
+          if [ ! -f auction-credit-platform-demo.zip ]; then
+            echo "ZIP file not found. Nothing to extract."
+            exit 0
+          fi
+          rm -rf /tmp/auction-source
+          mkdir -p /tmp/auction-source
+          unzip -o auction-credit-platform-demo.zip -d /tmp/auction-source
+          if [ -d /tmp/auction-source/auction-credit-platform-demo ]; then
+            cp -R /tmp/auction-source/auction-credit-platform-demo/. .
+          else
+            cp -R /tmp/auction-source/. .
+          fi
+          rm -rf node_modules dist
+
+      - name: Ensure GitHub Pages base path
+        run: |
+          cat > vite.config.js <<'EOF'
+          import { defineConfig } from 'vite';
+          import react from '@vitejs/plugin-react';
+
+          export default defineConfig({
+            base: '/auction-credit-platform-demo/',
+            plugins: [react()],
+          });
+          EOF
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Commit extracted source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Extract original ZIP source and fix GitHub Pages build"
+            git push
+          fi
