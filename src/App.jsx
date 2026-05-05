@@ -10,7 +10,6 @@ import BidPage from './pages/BidPage'
 import BidRoom from './pages/BidRoom'
 import SellerDashboard from './pages/SellerDashboard'
 import AdminDashboard from './pages/AdminDashboard'
-import { DEMO_ACCOUNTS } from './data/demoAccounts'
 
 const AUTH_KEY = 'auction_platform_login_v2_user_id'
 
@@ -47,11 +46,11 @@ function Router({ onLogout }) {
 }
 
 function AuthGate() {
-  const { setCurrentUser } = useAuction()
+  const { state, setCurrentUser } = useAuction()
   const [selectedUserId, setSelectedUserId] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const loginUsers = useMemo(() => DEMO_ACCOUNTS, [])
+  const loginUsers = useMemo(() => state.users, [state.users])
 
   useEffect(() => {
     localStorage.removeItem(AUTH_KEY)
