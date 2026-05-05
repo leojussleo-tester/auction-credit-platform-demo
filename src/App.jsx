@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Layout from './components/Layout'
-import { AuctionProvider } from './context/AuctionContext'
+import { AuctionProvider, useAuction } from './context/AuctionContext'
 import Home from './pages/Home'
 import AccountKYC from './pages/AccountKYC'
 import Wallet from './pages/Wallet'
@@ -29,14 +29,15 @@ function useHashRoute() {
 function Router() {
   const route = useHashRoute()
   const roomMatch = route.match(/^\/room\/(.+)$/)
+  const { currentUser } = useAuction()
 
   let page = <Home />
   if (route === '/account') page = <AccountKYC />
   if (route === '/wallet') page = <Wallet />
   if (route === '/bid') page = <BidPage />
   if (roomMatch) page = <BidRoom roomId={roomMatch[1]} />
-  if (route === '/seller') page = <SellerDashboard />
-  if (route === '/admin') page = <AdminDashboard />
+  if (route === '/seller' && currentUser?.role === 'seller') page = <SellerDashboard />
+  if (route === '/admin' && currentUser?.role === 'admin') page = <AdminDashboard />
 
   return <Layout route={route}>{page}</Layout>
 }

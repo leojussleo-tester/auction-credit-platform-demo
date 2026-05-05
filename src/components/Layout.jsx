@@ -2,17 +2,21 @@ import Badge from './Badge'
 import { useAuction } from '../context/AuctionContext'
 import { money } from '../utils/policies'
 
-const navItems = [
-  { label: 'Home', href: '#/' },
-  { label: 'My Info', href: '#/account' },
-  { label: 'My Wallet', href: '#/wallet' },
-  { label: 'Bid Lobby', href: '#/bid' },
-  { label: 'Seller Mode', href: '#/seller' },
-  { label: 'Admin System', href: '#/admin' },
-]
-
 export default function Layout({ children, route }) {
-  const { currentUser, currentMemberLevel, state, setCurrentUser, resetDemo } = useAuction()
+  const { currentUser, currentMemberLevel, resetDemo } = useAuction()
+  const role = currentUser?.role
+  const navItems = [
+    { label: 'Home', href: '#/' },
+    { label: 'Bid Lobby', href: '#/bid' },
+    ...(role !== 'admin' ? [{ label: 'My Wallet', href: '#/wallet' }, { label: 'My Info', href: '#/account' }] : []),
+    ...(role === 'seller' ? [{ label: 'Seller Mode', href: '#/seller' }] : []),
+    ...(role === 'admin' ? [{ label: 'Admin System', href: '#/admin' }] : []),
+  ]
+
+  const logout = () => {
+    localStorage.removeItem('auction_login_user_id')
+    window.location.reload()
+  }
 
   return (
     <div className="min-h-screen">
@@ -55,7 +59,7 @@ export default function Layout({ children, route }) {
               </div>
               <div>
                 <p className="font-black text-white">{currentUser?.name}</p>
-                <p className="text-xs text-slate-500">{currentUser?.email}</p>
+                <p className="text-xs text-slate-400">{currentUser?.email}</p>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -73,13 +77,8 @@ export default function Layout({ children, route }) {
                 <p className="font-black text-auction-gold">{money(currentUser?.wallet?.pending)}</p>
               </div>
             </div>
-            <label className="label mt-5">Switch Demo User</label>
-            <select className="field" value={state.currentUserId} onChange={(event) => setCurrentUser(event.target.value)}>
-              {state.users.map((user) => (
-                <option value={user.id} key={user.id}>{user.name}</option>
-              ))}
-            </select>
             <button onClick={resetDemo} className="btn-secondary mt-4 w-full">Reset Demo Data</button>
+            <button onClick={logout} className="btn-danger mt-3 w-full">Logout</button>
           </div>
 
           <div className="soft-card p-5">
