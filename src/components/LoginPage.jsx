@@ -1,77 +1,96 @@
+import { useMemo, useState } from 'react'
+
 const groups = [
-  {
-    key: 'buyer',
-    title: 'Member Account',
-    subtitle: 'Sign up + KYC mock',
-    description: 'Classic / Pro / VIP member demo accounts for bidding and wallet flow.',
-  },
-  {
-    key: 'seller',
-    title: 'Seller Account',
-    subtitle: 'KYC + Accept mock',
-    description: 'Seller dashboard, product registration, settlement and seller rule flow.',
-  },
-  {
-    key: 'admin',
-    title: 'Admin Account',
-    subtitle: 'Platform staff',
-    description: 'Platform controls for rooms, reports, product approvals and wallet requests.',
-  },
+  { key: 'buyer', title: 'MEMBER', subtitle: 'Classic / Pro / VIP member accounts' },
+  { key: 'seller', title: 'SELLER', subtitle: 'Classic / Pro / VIP seller accounts' },
+  { key: 'admin', title: 'ADMIN', subtitle: 'Platform admin account' },
 ]
 
 function tierOf(user) {
-  return user.memberLevelOverride || user.sellerTier || (user.role === 'admin' ? 'STAFF' : 'CLASSIC')
+  return (user.memberLevelOverride || user.sellerTier || (user.role === 'admin' ? 'STAFF' : 'CLASSIC')).toUpperCase()
 }
 
-export default function LoginPage({ users, onLogin }) {
+export default function LoginPage({ users, onLogin, onRegister }) {
+  const [tab, setTab] = useState('login')
+  const [loginForm, setLoginForm] = useState({ login: '', password: '' })
+  const [regForm, setRegForm] = useState({ name: '', login: '', password: '', confirmPassword: '', role: 'buyer', shopName: '', phone: '', bankAccount: '' })
+  const [error, setError] = useState('')
+
+  const demoGroups = useMemo(() => groups.map((g) => ({ ...g, users: users.filter((u) => u.role === g.key) })), [users])
+
+  function submitLogin(e) {
+    e.preventDefault(); setError('')
+    const result = onLogin(loginForm)
+    if (!result.ok) setError(result.message)
+  }
+
+  function submitRegister(e) {
+    e.preventDefault(); setError('')
+    const result = onRegister(regForm)
+    if (!result.ok) setError(result.message)
+  }
+
   return (
-    <main className="min-h-screen overflow-hidden bg-[#05070b] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(226,184,90,.24),transparent_32%),radial-gradient(circle_at_85%_5%,rgba(52,211,153,.13),transparent_28%),linear-gradient(135deg,#040507,#0b1020_55%,#06070b)]" />
-      <section className="relative mx-auto flex min-h-screen max-w-7xl items-center px-5 py-10">
-        <div className="w-full rounded-[2rem] border border-auction-gold/25 bg-black/55 p-5 shadow-luxury backdrop-blur-2xl md:p-9">
-          <div className="mb-8 max-w-3xl">
-            <p className="text-xs font-black uppercase tracking-[0.32em] text-auction-gold">Auction Platform Login</p>
-            <h1 className="mt-4 text-4xl font-black tracking-tight text-white md:text-6xl">Choose a demo account</h1>
-            <p className="mt-4 text-base leading-7 text-slate-300 md:text-lg">
-              Bắt buộc đăng nhập trước khi vào web demo. Mỗi account mở đúng giao diện theo role: Member, Seller hoặc Admin.
-            </p>
+    <main className="min-h-screen bg-[#05070b] text-white px-4 py-8">
+      <div className="mx-auto max-w-7xl rounded-[2rem] border border-auction-gold/25 bg-black/55 p-5 shadow-luxury backdrop-blur-2xl md:p-8">
+        <h1 className="text-3xl md:text-5xl font-black">Auction Platform Access</h1>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-5">
+            <div className="mb-4 flex gap-2">
+              <button onClick={() => setTab('login')} className={`rounded-xl px-4 py-2 font-bold ${tab === 'login' ? 'bg-auction-gold text-black' : 'bg-white/10'}`}>Đăng nhập</button>
+              <button onClick={() => setTab('register')} className={`rounded-xl px-4 py-2 font-bold ${tab === 'register' ? 'bg-auction-gold text-black' : 'bg-white/10'}`}>Đăng ký</button>
+            </div>
+            {tab === 'login' ? (
+              <form onSubmit={submitLogin} className="space-y-3">
+                <input className="w-full rounded-xl bg-white/10 p-3" placeholder="Tài khoản / email" value={loginForm.login} onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })} />
+                <input type="password" className="w-full rounded-xl bg-white/10 p-3" placeholder="Mật khẩu" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} />
+                <button className="w-full rounded-xl bg-auction-gold px-4 py-3 font-black text-black">Đăng nhập</button>
+              </form>
+            ) : (
+              <form onSubmit={submitRegister} className="space-y-3">
+                <input className="w-full rounded-xl bg-white/10 p-3" placeholder="Họ tên" value={regForm.name} onChange={(e) => setRegForm({ ...regForm, name: e.target.value })} />
+                <input className="w-full rounded-xl bg-white/10 p-3" placeholder="Username hoặc email" value={regForm.login} onChange={(e) => setRegForm({ ...regForm, login: e.target.value })} />
+                <input type="password" className="w-full rounded-xl bg-white/10 p-3" placeholder="Mật khẩu" value={regForm.password} onChange={(e) => setRegForm({ ...regForm, password: e.target.value })} />
+                <input type="password" className="w-full rounded-xl bg-white/10 p-3" placeholder="Xác nhận mật khẩu" value={regForm.confirmPassword} onChange={(e) => setRegForm({ ...regForm, confirmPassword: e.target.value })} />
+                <select className="w-full rounded-xl bg-white/10 p-3" value={regForm.role} onChange={(e) => setRegForm({ ...regForm, role: e.target.value })}>
+                  <option value="buyer">Member</option><option value="seller">Seller</option>
+                </select>
+                {regForm.role === 'seller' && <>
+                  <input className="w-full rounded-xl bg-white/10 p-3" placeholder="Shop name" value={regForm.shopName} onChange={(e) => setRegForm({ ...regForm, shopName: e.target.value })} />
+                  <input className="w-full rounded-xl bg-white/10 p-3" placeholder="Số điện thoại" value={regForm.phone} onChange={(e) => setRegForm({ ...regForm, phone: e.target.value })} />
+                  <input className="w-full rounded-xl bg-white/10 p-3" placeholder="Bank account" value={regForm.bankAccount} onChange={(e) => setRegForm({ ...regForm, bankAccount: e.target.value })} />
+                </>}
+                <button className="w-full rounded-xl bg-auction-gold px-4 py-3 font-black text-black">Đăng ký</button>
+              </form>
+            )}
+            {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-3">
-            {groups.map((group) => {
-              const groupUsers = users.filter((user) => user.role === group.key)
-              return (
-                <section key={group.key} className="rounded-[1.75rem] border border-white/10 bg-slate-950/75 p-5 shadow-[0_24px_90px_rgba(0,0,0,.32)]">
-                  <p className="text-xs font-black uppercase tracking-[0.26em] text-auction-gold">{group.title}</p>
-                  <h2 className="mt-3 text-2xl font-black text-white">{group.subtitle}</h2>
-                  <p className="mt-2 min-h-[48px] text-sm leading-6 text-slate-300">{group.description}</p>
-
-                  <div className="mt-5 space-y-3">
-                    {groupUsers.map((user) => (
-                      <button
-                        key={user.id}
-                        onClick={() => onLogin(user.id)}
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-left transition hover:-translate-y-0.5 hover:border-auction-gold/60 hover:bg-auction-gold/10"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-lg font-black text-white">{user.name}</p>
-                            <p className="mt-1 text-sm text-slate-300">{user.email}</p>
-                          </div>
-                          <span className="rounded-full border border-auction-gold/40 bg-auction-gold/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-auction-gold">
-                            {tierOf(user)}
-                          </span>
-                        </div>
-                        <span className="mt-4 inline-flex rounded-xl bg-auction-gold px-4 py-2 text-sm font-black text-black">Login demo</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
+          <div className="space-y-4">
+            {demoGroups.map((group) => (
+              <section key={group.key} className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+                <p className="text-xs font-black tracking-[0.22em] text-auction-gold">{group.title}</p>
+                <p className="mb-3 text-sm text-slate-300">{group.subtitle}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {group.users.map((user) => (
+                    <div key={user.id} className="flex min-h-[180px] flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+                      <div>
+                        <p className="font-black">{user.name}</p>
+                        <p className="text-xs text-slate-300">{user.username} / {user.email}</p>
+                        <p className="text-xs text-slate-300 mt-1">Password: <span className="text-auction-gold">{user.password}</span></p>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="rounded-full border border-auction-gold/40 px-3 py-1 text-[10px] font-black tracking-[0.16em] text-auction-gold">{tierOf(user)}</span>
+                        <button type="button" onClick={() => { setTab('login'); setLoginForm({ login: user.username || user.email, password: user.password }); }} className="rounded-xl bg-auction-gold px-3 py-2 text-xs font-black text-black">Use demo</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
     </main>
   )
 }

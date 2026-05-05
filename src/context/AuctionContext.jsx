@@ -320,6 +320,45 @@ export function AuctionProvider({ children }) {
     return result
   }
 
+
+  function registerAccount(payload) {
+    let result = { ok: true, userId: '', message: 'Registered successfully.' }
+    setState((prev) => {
+      const draft = clone(prev)
+      const normalized = (payload.login || '').trim().toLowerCase()
+      const duplicate = draft.users.find((u) => u.email.toLowerCase() === normalized || (u.username || '').toLowerCase() === normalized)
+      if (duplicate) { result = { ok: false, userId: '', message: 'Username/email already exists.' }; return prev }
+
+      const newUser = {
+        id: nextId('u'),
+        role: payload.role,
+        name: payload.name,
+        username: payload.username,
+        email: payload.email,
+        password: payload.password,
+        phone: payload.phone || '',
+        shopName: payload.shopName || '',
+        bankAccount: payload.bankAccount || '',
+        kycStatus: 'Pending',
+        sellerEnabled: payload.role === 'seller' ? false : false,
+        score: 0,
+        winsPaid: 0,
+        totalWonValue: 0,
+        failedPayments: [],
+        seriousFailedPayments: 0,
+        wallet: { available: 0, pending: 0 },
+        winHistory: [],
+        transactions: [],
+      }
+      draft.users = [newUser, ...draft.users]
+      draft.currentUserId = newUser.id
+      addLog(draft, `${newUser.name} registered a new ${newUser.role} account.`)
+      result = { ok: true, userId: newUser.id, message: 'Registered successfully.' }
+      return draft
+    })
+    return result
+  }
+
   function setCurrentUser(userId) {
     setState((prev) => ({ ...ensureDemoUsers(prev), currentUserId: userId }))
   }
@@ -334,7 +373,7 @@ export function AuctionProvider({ children }) {
     followedRooms: state.rooms.filter((room) => state.followedRoomIds.includes(room.id)),
     updateCurrentUser, submitKyc, topUpCredit, toggleFollowRoom, placeBid, submitSellerProduct,
     adminUpdateUser, adminUpdateProduct, adminCreateRoom, adminUpdateRoom, adminMarkWinnerPaid,
-    adminMarkFailedPayment, adminApplyPenalty, adminReleaseSettlement, setCurrentUser, resetDemo, getPendingRate,
+    adminMarkFailedPayment, adminApplyPenalty, adminReleaseSettlement, registerAccount, setCurrentUser, resetDemo, getPendingRate,
   }
 
   return <AuctionContext.Provider value={value}>{children}</AuctionContext.Provider>

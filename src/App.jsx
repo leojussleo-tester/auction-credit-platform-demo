@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Layout from './components/Layout'
 import LoginPage from './components/LoginPage'
 import LoadingScreen from './components/LoadingScreen'
@@ -10,14 +10,9 @@ import BidPage from './pages/BidPage'
 import BidRoom from './pages/BidRoom'
 import SellerDashboard from './pages/SellerDashboard'
 import AdminDashboard from './pages/AdminDashboard'
-import { DEMO_ACCOUNTS } from './data/demoAccounts'
 
-const AUTH_KEY = 'auction_platform_login_v2_user_id'
-
-function getRoute() {
-  const hash = window.location.hash.replace('#', '')
-  return hash || '/'
-}
+const AUTH_KEY = 'auction-auth-session'
+const getRoute = () => window.location.hash.replace('#', '') || '/'
 
 function useHashRoute() {
   const [route, setRoute] = useState(getRoute())
@@ -34,7 +29,6 @@ function Router({ onLogout }) {
   const roomMatch = route.match(/^\/room\/(.+)$/)
   const { currentUser } = useAuction()
   const role = currentUser?.role
-
   let page = <Home />
   if (role !== 'admin' && route === '/account') page = <AccountKYC />
   if (role !== 'admin' && route === '/wallet') page = <Wallet />
@@ -42,31 +36,63 @@ function Router({ onLogout }) {
   if (roomMatch) page = <BidRoom roomId={roomMatch[1]} />
   if (route === '/seller') page = role === 'seller' ? <SellerDashboard /> : <Home />
   if (route === '/admin') page = role === 'admin' ? <AdminDashboard /> : <Home />
-
   return <Layout route={route} onLogout={onLogout}>{page}</Layout>
 }
 
 function AuthGate() {
-  const { setCurrentUser } = useAuction()
-  const [selectedUserId, setSelectedUserId] = useState(() => localStorage.getItem(AUTH_KEY) || '')
+  const { state, setCurrentUser, registerAccount } = useAuction()
+  const [selectedUserId, setSelectedUserId] = useState(() => {
+    const raw = localStorage.getItem(AUTH_KEY)
+    if (!raw) return ''
+    try { return JSON.parse(raw).userId || '' } catch { return '' }
+  })
   const [loading, setLoading] = useState(false)
-
-  const loginUsers = useMemo(() => DEMO_ACCOUNTS, [])
 
   useEffect(() => {
     if (!selectedUserId) return
-    localStorage.setItem(AUTH_KEY, selectedUserId)
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ userId: selectedUserId, loginAt: new Date().toISOString() }))
     setCurrentUser(selectedUserId)
   }, [selectedUserId, setCurrentUser])
 
-  function handleLogin(userId) {
+  function handleLogin({ login, password }) {
+    const normalized = (login || '').trim().toLowerCase()
+    const user = state.users.find((u) => u.email.toLowerCase() === normalized || (u.username || '').toLowerCase() === normalized)
+    if (!user) return { ok: false, message: 'Không tìm thấy tài khoản.' }
+    if ((user.password || '') !== password) return { ok: false, message: 'Sai mật khẩu.' }
     setLoading(true)
     setTimeout(() => {
-      setCurrentUser(userId)
-      setSelectedUserId(userId)
+      setCurrentUser(user.id)
+      setSelectedUserId(user.id)
       setLoading(false)
       window.location.hash = '#/'
-    }, 1200)
+    }, 600)
+    return { ok: true }
+  }
+
+  function handleRegister(form) {
+    const login = (form.login || '').trim()
+    if (!form.name || !login || !form.password) return { ok: false, message: 'Vui lòng nhập đủ thông tin bắt buộc.' }
+    if (form.password !== form.confirmPassword) return { ok: false, message: 'Xác nhận mật khẩu không khớp.' }
+    if (form.role === 'seller' && (!form.shopName || !form.phone || !form.bankAccount)) return { ok: false, message: 'Seller cần shop name, phone và bank account.' }
+
+    const isEmail = login.includes('@')
+    const payload = {
+      role: form.role,
+      name: form.name.trim(),
+      username: isEmail ? login.split('@')[0] : login,
+      email: isEmail ? login : `${login}@local.demo`,
+      login,
+      password: form.password,
+      shopName: form.shopName,
+      phone: form.phone,
+      bankAccount: form.bankAccount,
+    }
+
+    const result = registerAccount(payload)
+    if (!result.ok) return { ok: false, message: result.message }
+    setSelectedUserId(result.userId)
+    window.location.hash = '#/'
+    return { ok: true }
   }
 
   function handleLogout() {
@@ -76,15 +102,10 @@ function AuthGate() {
   }
 
   if (loading) return <LoadingScreen />
-  if (!selectedUserId) return <LoginPage users={loginUsers} onLogin={handleLogin} />
-
+  if (!selectedUserId) return <LoginPage users={state.users} onLogin={handleLogin} onRegister={handleRegister} />
   return <Router onLogout={handleLogout} />
 }
 
 export default function App() {
-  return (
-    <AuctionProvider>
-      <AuthGate />
-    </AuctionProvider>
-  )
+  return <AuctionProvider><AuthGate /></AuctionProvider>
 }
