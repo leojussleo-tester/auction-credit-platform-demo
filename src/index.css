@@ -37,7 +37,80 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
   .field { @apply w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-auction-gold/70 focus:ring-2 focus:ring-auction-gold/25; }
   .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-auction-gold to-auction-goldSoft px-5 py-3 text-sm font-black text-black shadow-luxury transition duration-300 hover:-translate-y-0.5 hover:brightness-110; }
   .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] px-5 py-3 text-sm font-bold text-white transition duration-300 hover:-translate-y-0.5 hover:border-auction-gold/45 hover:bg-white/[0.12]; }
+  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-5 py-3 text-sm font-bold text-rose-100 transition duration-300 hover:-translate-y-0.5 hover:bg-rose-500/20; }
   .page-title { @apply text-3xl font-black tracking-tight text-white md:text-5xl; }
-  .label { @apply mb-2 block text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400; }
-  .muted { @apply text-sm leading-6 text-slate-400; }
+  .label { @apply mb-2 block text-[11px] font-bold uppercase tracking-[0.24em] text-slate-300; }
+  .muted { @apply text-sm leading-6 text-slate-300; }
+}
+
+/* Hard readability pass for mobile demo cards. Some generated components used very light cards,
+   causing white-on-white or pale text on pale backgrounds. Keep the luxury feel but force contrast. */
+main .glass-card,
+main .section-card,
+main .soft-card {
+  background: linear-gradient(145deg, rgba(12, 17, 29, 0.92), rgba(19, 28, 45, 0.78)) !important;
+  border-color: rgba(226, 184, 90, 0.22) !important;
+  color: #f8fafc !important;
+}
+
+main [class*="bg-white"],
+main [class*="bg-slate-50"],
+main [class*="bg-stone-50"],
+main [class*="bg-amber-50"] {
+  background: linear-gradient(145deg, rgba(12, 17, 29, 0.94), rgba(24, 32, 52, 0.82)) !important;
+  border: 1px solid rgba(226, 184, 90, 0.22) !important;
+  color: #f8fafc !important;
+}
+
+main [class*="text-slate-500"],
+main [class*="text-slate-400"],
+main [class*="text-gray-500"],
+main [class*="text-gray-400"],
+main [class*="text-stone-500"],
+main [class*="text-stone-400"] {
+  color: #cbd5e1 !important;
+}
+
+main [class*="text-white"] {
+  color: #f8fafc !important;
+}
+
+main [class*="text-black"] {
+  color: #020617 !important;
+}
+
+main input,
+main textarea,
+main select {
+  background: rgba(2, 6, 23, 0.76) !important;
+  border-color: rgba(226, 184, 90, 0.24) !important;
+  color: #f8fafc !important;
+}
+
+main option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+main table th,
+main table td {
+  color: #dbe4f0;
+}
+
+main table strong,
+main h1,
+main h2,
+main h3,
+main h4 {
+  color: #ffffff;
+}
+
+main .btn-primary,
+main .btn-primary * {
+  color: #050608 !important;
+}
+
+main .btn-secondary,
+main .btn-secondary * {
+  color: #f8fafc !important;
 }
