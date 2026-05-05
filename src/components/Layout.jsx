@@ -4,11 +4,11 @@ import { money } from '../utils/policies'
 
 const navItems = [
   { label: 'Home', href: '#/' },
-  { label: 'Account + KYC', href: '#/account' },
+  { label: 'My Info', href: '#/account' },
   { label: 'My Wallet', href: '#/wallet' },
-  { label: 'Bid Page', href: '#/bid' },
-  { label: 'Seller', href: '#/seller' },
-  { label: 'Admin', href: '#/admin' },
+  { label: 'Bid Lobby', href: '#/bid' },
+  { label: 'Seller Mode', href: '#/seller' },
+  { label: 'Admin System', href: '#/admin' },
 ]
 
 export default function Layout({ children, route }) {
@@ -59,6 +59,7 @@ export default function Layout({ children, route }) {
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
+              <Badge>{(currentUser?.role || 'member').toUpperCase()}</Badge>
               <Badge>{currentMemberLevel}</Badge>
               <Badge>{currentUser?.kycStatus}</Badge>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Layout from './components/Layout'
 import { AuctionProvider } from './context/AuctionContext'
 import Home from './pages/Home'
@@ -8,6 +8,8 @@ import BidPage from './pages/BidPage'
 import BidRoom from './pages/BidRoom'
 import SellerDashboard from './pages/SellerDashboard'
 import AdminDashboard from './pages/AdminDashboard'
+import LoginPage from './components/LoginPage'
+import LoadingScreen from './components/LoadingScreen'
 
 function getRoute() {
   const hash = window.location.hash.replace('#', '')
@@ -40,9 +42,47 @@ function Router() {
 }
 
 export default function App() {
+  const [selectedUserId, setSelectedUserId] = useState(() => localStorage.getItem('auction_login_user_id'))
+  const [loading, setLoading] = useState(false)
+
+  const ready = Boolean(selectedUserId)
+
+  useEffect(() => {
+    if (selectedUserId) localStorage.setItem('auction_login_user_id', selectedUserId)
+    else localStorage.removeItem('auction_login_user_id')
+  }, [selectedUserId])
+
   return (
     <AuctionProvider>
-      <Router />
+      <AuthGate ready={ready} selectedUserId={selectedUserId} onLogin={setSelectedUserId} loading={loading} setLoading={setLoading} />
     </AuctionProvider>
   )
+}
+
+function AuthGate({ ready, selectedUserId, onLogin, loading, setLoading }) {
+  const { state, setCurrentUser } = useAuction()
+
+  useEffect(() => {
+    if (selectedUserId) setCurrentUser(selectedUserId)
+  }, [selectedUserId, setCurrentUser])
+
+  const loginUsers = useMemo(
+    () => state.users.filter((u) => ['buyer', 'seller', 'admin'].includes(u.role)),
+    [state.users]
+  )
+
+  const handleLogin = (id) => {
+    setLoading(true)
+    setTimeout(() => {
+      onLogin(id)
+      setCurrentUser(id)
+      setLoading(false)
+      window.location.hash = '#/'
+    }, 1300)
+  }
+
+  if (!ready) return loading ? <LoadingScreen /> : <LoginPage users={loginUsers} onLogin={handleLogin} />
+  if (loading) return <LoadingScreen />
+
+  return <Router />
 }
