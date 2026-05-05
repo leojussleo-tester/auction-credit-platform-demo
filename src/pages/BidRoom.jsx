@@ -86,7 +86,7 @@ export default function BidRoom({ roomId }) {
         </div>
 
         <aside className="space-y-5">
-          <div className="glass-card p-6">
+          <div className="glass-card p-5 md:p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <StatCard label="Starting Price" value={money(room.startingPrice)} />
               <StatCard label="Highest Bid" value={money(room.currentHighestBid)} accent />
@@ -94,11 +94,11 @@ export default function BidRoom({ roomId }) {
               <StatCard label="Minimum Next Bid" value={money(minimumBid)} />
             </div>
 
-            <div className="mt-6 rounded-3xl border border-white/10 bg-black/25 p-5">
+            <div className="mt-6 rounded-3xl border border-white/15 bg-slate-950/75 p-4 md:p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Place Bid</p>
-                  <p className="mt-2 text-sm text-slate-400">Manual custom bid hoặc bid nhanh theo increment.</p>
+                  <p className="mt-2 text-sm text-slate-300">Manual custom bid hoặc bid nhanh theo increment.</p>
                 </div>
                 <Badge>{currentMemberLevel}</Badge>
               </div>
@@ -113,14 +113,14 @@ export default function BidRoom({ roomId }) {
                 <input className="field" type="number" min={minimumBid} value={bidAmount} onChange={(e) => setBidAmount(Number(e.target.value))} />
               </label>
 
-              <div className="mt-4 rounded-2xl bg-white/[0.05] p-4 text-sm text-slate-300">
+              <div className="mt-4 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-sm text-slate-200">
                 <div className="flex justify-between gap-3"><span>Bid amount</span><strong className="text-white">{money(bidAmount)}</strong></div>
                 <div className="mt-2 flex justify-between gap-3"><span>Pending before confirm</span><strong className="text-auction-gold">{pendingAmount === null ? 'Blocked' : money(pendingAmount)}</strong></div>
                 <div className="mt-2 flex justify-between gap-3"><span>Available Credit</span><strong className="text-white">{money(currentUser.wallet.available)}</strong></div>
               </div>
 
               <button
-                className="btn-primary mt-5 w-full"
+                className="btn-primary mt-5 w-full py-3.5 text-base"
                 disabled={!eligibility.allowed || room.status !== 'Live' || bidAmount < minimumBid || pendingAmount === null || currentUser.wallet.available < pendingAmount}
                 onClick={() => setConfirmOpen(true)}
               >
@@ -161,7 +161,7 @@ export default function BidRoom({ roomId }) {
                   <td><Badge tone={bid.status === 'active' ? 'Live' : bid.status === 'paid' ? 'Paid' : bid.status === 'failed' ? 'Rejected' : 'Ended'}>{bid.status}</Badge></td>
                 </tr>
               ))}
-              {!sortedBids.length ? <tr><td className="py-5 text-slate-400" colSpan="5">No bids yet. Be the first bidder.</td></tr> : null}
+              {!sortedBids.length ? <tr><td className="py-5 text-slate-300" colSpan="5">No bids yet. Be the first bidder.</td></tr> : null}
             </tbody>
           </table>
         </div>

@@ -120,7 +120,7 @@ export default function AdminDashboard() {
           </div>
           <div className="space-y-3">
             {state.sellerProducts.map((product) => (
-              <div key={product.id} className="soft-card p-4">
+              <div key={product.id} className="rounded-2xl border border-white/15 bg-slate-900/75 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="font-black text-white">{product.name}</p>
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
             const activeBid = room.bids.find((bid) => bid.status === 'active')
             const paidBid = room.bids.find((bid) => bid.status === 'paid')
             return (
-              <div key={room.id} className="soft-card p-4">
+              <div key={room.id} className="rounded-2xl border border-white/15 bg-slate-900/75 p-4">
                 <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr]">
                   <div>
                     <div className="flex flex-wrap gap-2">

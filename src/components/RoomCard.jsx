@@ -8,8 +8,8 @@ export default function RoomCard({ room, compact = false }) {
   const eligibility = canJoinRoom(currentUser, room)
 
   return (
-    <article className="glass-card overflow-hidden transition hover:-translate-y-1 hover:border-auction-gold/30">
-      <div className="relative h-56 overflow-hidden">
+    <article className="glass-card overflow-hidden transition hover:-translate-y-1 hover:border-auction-gold/35">
+      <div className="relative h-44 overflow-hidden sm:h-52">
         <img src={room.image} alt={room.title} className="h-full w-full object-cover transition duration-500 hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
@@ -23,29 +23,33 @@ export default function RoomCard({ room, compact = false }) {
           {followed ? '★ Followed' : '☆ Follow'}
         </button>
         <div className="absolute bottom-4 left-4 right-4">
-          <h3 className="text-2xl font-black text-white">{room.title}</h3>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-auction-gold">Ends: {timeLeft(room.endTime, room.status)}</p>
+          <h3 className="line-clamp-2 text-lg font-black text-white sm:text-xl">{room.title}</h3>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-200">Ends: {timeLeft(room.endTime, room.status)}</p>
         </div>
       </div>
-      <div className="space-y-4 p-5">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-2xl bg-black/25 p-3">
-            <p className="text-slate-500">Current price</p>
-            <p className="font-black text-white">{money(room.currentHighestBid)}</p>
+      <div className="space-y-3 p-4 sm:p-5">
+        <div className="grid grid-cols-2 gap-2 text-sm sm:gap-3">
+          <div className="rounded-xl border border-white/10 bg-slate-950/70 p-3">
+            <p className="text-xs text-slate-300">Highest Bid</p>
+            <p className="font-black text-amber-200">{money(room.currentHighestBid)}</p>
           </div>
-          <div className="rounded-2xl bg-black/25 p-3">
-            <p className="text-slate-500">Min increment</p>
+          <div className="rounded-xl border border-white/10 bg-slate-950/70 p-3">
+            <p className="text-xs text-slate-300">Min Increment</p>
             <p className="font-black text-white">{money(room.minIncrement)}</p>
           </div>
         </div>
+        <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+          <p>Seller: <span className="font-semibold text-white">{room.sellerName}</span></p>
+          <p>Winner: <span className="font-semibold text-white">{room.winnerUserId ? room.bids.find((b)=>b.status==='active')?.username || 'Pending' : 'N/A'}</span></p>
+        </div>
         {!compact ? (
           <>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Join Condition</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
+            <div className="rounded-2xl border border-white/15 bg-slate-900/70 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">Join Condition</p>
+              <p className="mt-2 text-sm leading-6 text-slate-200">
                 {eligibility.allowed ? getPendingPolicyText(currentMemberLevel, room.roomLevel) : eligibility.reason}
               </p>
-              <p className="mt-2 text-xs text-slate-500">Start: {formatDateTime(room.startTime)} · End: {formatDateTime(room.endTime)}</p>
+              <p className="mt-2 text-xs text-slate-400">Start: {formatDateTime(room.startTime)} · End: {formatDateTime(room.endTime)}</p>
             </div>
           </>
         ) : null}

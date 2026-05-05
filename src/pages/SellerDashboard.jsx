@@ -106,20 +106,27 @@ export default function SellerDashboard() {
               <span className="label">Ghi chú xác minh</span>
               <textarea className="field min-h-24" value={form.verificationNote} onChange={(e) => update('verificationNote', e.target.value)} />
             </label>
-            <button className="btn-primary w-full" type="submit">Submit Product for Verification</button>
+            <button className="btn-primary w-full py-3.5 text-base" type="submit">Submit Product for Verification</button>
           </fieldset>
         </form>
 
         <div className="glass-card p-6">
           <div className="mb-6">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Policy</p>
-            <h2 className="mt-2 text-2xl font-black text-white">Seller rules</h2>
+            <h2 className="mt-2 text-2xl font-black text-white">Seller Rules</h2>
           </div>
-          <div className="space-y-3 text-sm leading-6 text-slate-300">
-            <div className="soft-card p-4"><strong className="text-white">Admin cấp quyền seller:</strong> Seller không tự mở dashboard bán hàng.</div>
-            <div className="soft-card p-4"><strong className="text-white">Verify product:</strong> Sản phẩm phải Pending → Verified trước khi tạo room.</div>
-            <div className="soft-card p-4"><strong className="text-white">Fee:</strong> Platform khấu trừ 10% trước khi release settlement.</div>
-            <div className="soft-card p-4"><strong className="text-white">Settlement:</strong> Sau khi winner paid và đơn hàng hoàn tất, admin release phần còn lại cho seller.</div>
+          <div className="grid gap-3">
+            {[
+              ['Access Control', 'Admin cấp quyền seller: Seller không tự mở dashboard bán hàng.'],
+              ['Product Verification', 'Sản phẩm phải Pending → Verified trước khi tạo room và mở bán.'],
+              ['Platform Fee', 'Platform khấu trừ 10% trước khi release settlement về ví seller.'],
+              ['Settlement Rule', 'Chỉ khi winner paid + admin xác nhận hoàn tất thì settlement mới được release.'],
+            ].map(([title, content]) => (
+              <div key={title} className="rounded-2xl border border-white/15 bg-slate-900/70 p-4">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">◆ {title}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-200">{content}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

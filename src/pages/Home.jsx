@@ -27,13 +27,13 @@ export default function Home() {
               Prototype này mô phỏng đầy đủ flow buyer / seller / admin cho sàn đấu giá dùng Auction Credit nội bộ. Không phải crypto token public, không thanh toán thật, tất cả data lưu bằng localStorage.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a className="btn-primary" href="#/bid">Go to Bid Page</a>
-              <a className="btn-secondary" href="#/wallet">Open Wallet</a>
+              <a className="btn-primary" href="#/bid">Enter Bid Floor</a>
+              <a className="btn-secondary border-amber-200/30" href="#/wallet">Open Wallet</a>
               <a className="btn-secondary" href="#/admin">Admin Dashboard</a>
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-auction-gold/20 bg-black/30 p-5 shadow-neon">
+          <div className="rounded-[2rem] border border-amber-300/30 bg-gradient-to-br from-slate-900/90 to-slate-950/80 p-5 shadow-neon">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Member Status</p>
             <div className="mt-4 grid gap-3">
               <StatCard label="Available Credit" value={money(currentUser.wallet.available)} />
