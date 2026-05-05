@@ -66,7 +66,7 @@ function AuthGate() {
       setSelectedUserId(userId)
       setLoading(false)
       window.location.hash = '#/'
-    }, 1200)
+    }, 800)
   }
 
   function handleLogout() {
