@@ -1,6 +1,6 @@
 export const MEMBER_LEVELS = ['Classic', 'Pro', 'VIP']
 export const ROOM_LEVELS = ['Basic', 'Pro', 'VIP']
-export const ROOM_STATUSES = ['Upcoming', 'Live', 'Ended']
+export const ROOM_STATUSES = ['Upcoming', 'Live', 'Paused', 'Locked', 'Ended']
 export const KYC_STATUSES = ['Not Submitted', 'Pending', 'Approved', 'Rejected']
 
 export function money(value = 0) {
@@ -26,6 +26,8 @@ export function formatDateTime(value) {
 
 export function timeLeft(endTime, status) {
   if (status === 'Ended') return 'Ended'
+  if (status === 'Paused') return 'Paused by Admin'
+  if (status === 'Locked') return 'Locked by Admin'
   const diff = new Date(endTime).getTime() - Date.now()
   if (diff <= 0) return 'Closing soon'
   const hours = Math.floor(diff / 1000 / 60 / 60)
@@ -36,6 +38,7 @@ export function timeLeft(endTime, status) {
 
 export function calculateMemberLevel(user) {
   if (!user) return 'Classic'
+  if (user.role === 'admin') return 'VIP'
   if (user.memberLevelOverride) return user.memberLevelOverride
   const score = Number(user.score || 0)
   const winsPaid = Number(user.winsPaid || 0)
@@ -73,9 +76,11 @@ export function getPendingPolicyText(memberLevel, roomLevel) {
 
 export function canJoinRoom(user, room) {
   if (!user || !room) return { allowed: false, reason: 'Missing user or room.' }
-  if (user.kycStatus !== 'Approved') {
-    return { allowed: false, reason: 'User cần KYC Approved trước khi tham gia bid.' }
-  }
+  if (user.role === 'admin') return { allowed: true, reason: 'Admin staff can access every room without password.', rate: 0, memberLevel: 'VIP' }
+  if (user.isBanned) return { allowed: false, reason: 'Account đã bị ban do vi phạm room.' }
+  if (user.kycStatus !== 'Approved') return { allowed: false, reason: 'User cần KYC Approved trước khi tham gia bid.' }
+  if (room.status === 'Locked') return { allowed: false, reason: 'Room đang bị Admin khoá.' }
+  if (room.status === 'Paused') return { allowed: false, reason: 'Room đang tạm dừng bởi Admin.' }
   const level = calculateMemberLevel(user)
   if (room.roomLevel === 'VIP' && level === 'Classic') {
     return { allowed: false, reason: 'VIP Room chỉ dành cho Pro Member và VIP Member.' }
