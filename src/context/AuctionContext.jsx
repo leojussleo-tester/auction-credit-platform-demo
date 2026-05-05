@@ -188,23 +188,8 @@ export function AuctionProvider({ children }) {
     return result
   }
 
-  function adminUpdateUser(userId, patch) {
-    setState((prev) => {
-      const draft = clone(prev)
-      const user = draft.users.find((item) => item.id === userId)
-      if (user) { Object.assign(user, patch); addLog(draft, `Admin updated ${user.name}.`) }
-      return draft
-    })
-  }
-
-  function adminUpdateProduct(productId, patch) {
-    setState((prev) => {
-      const draft = clone(prev)
-      const product = draft.sellerProducts.find((item) => item.id === productId)
-      if (product) { Object.assign(product, patch); addLog(draft, `Admin updated product ${product.name}.`) }
-      return draft
-    })
-  }
+  function adminUpdateUser(userId, patch) { setState((prev) => { const draft = clone(prev); const user = draft.users.find((item) => item.id === userId); if (user) { Object.assign(user, patch); addLog(draft, `Admin updated ${user.name}.`) } return draft }) }
+  function adminUpdateProduct(productId, patch) { setState((prev) => { const draft = clone(prev); const product = draft.sellerProducts.find((item) => item.id === productId); if (product) { Object.assign(product, patch); addLog(draft, `Admin updated product ${product.name}.`) } return draft }) }
 
   function adminCreateRoom(form) {
     setState((prev) => {
@@ -213,6 +198,7 @@ export function AuctionProvider({ children }) {
       const product = draft.sellerProducts.find((item) => item.id === form.productId)
       const startingPrice = Number(form.startingPrice || product?.startingPrice || 500)
       const minIncrement = Number(form.minIncrement || product?.minIncrement || 50)
+      const hasPassword = form.hasPassword === true || form.hasPassword === 'true'
       const room = {
         id: nextId('room'), title: form.title || product?.name || 'New Auction Room', productName: product?.name || form.title || 'New Auction Product',
         image: product?.image || form.image || 'https://images.unsplash.com/photo-1605902711622-cfb43c4437d1?auto=format&fit=crop&w=1200&q=80',
@@ -221,120 +207,36 @@ export function AuctionProvider({ children }) {
         minIncrement, roomLevel: form.roomLevel || 'Basic', status: form.status || 'Upcoming', startTime: form.startTime || new Date().toISOString(),
         endTime: form.endTime || new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(), roomFee: form.roomLevel === 'VIP' ? 150 : form.roomLevel === 'Pro' ? 80 : 50,
         commissionRate: 0.1, paymentStatus: 'Not Started', settlementStatus: 'Waiting Auction Start', winnerUserId: null, bids: [],
+        hasPassword, roomPassword: hasPassword ? (form.roomPassword || '0000') : '', roomAccessNote: hasPassword ? 'Password Required' : 'Open Access',
       }
       draft.rooms = [room, ...draft.rooms]
       if (product) { product.roomId = room.id; product.settlementStatus = 'Listed' }
-      addLog(draft, `Admin created room ${room.title}.`)
+      addLog(draft, `Admin created room ${room.title}${hasPassword ? ' with room password.' : '.'}`)
       return draft
     })
   }
 
-  function adminUpdateRoom(roomId, patch) {
-    setState((prev) => {
-      const draft = clone(prev)
-      const room = draft.rooms.find((item) => item.id === roomId)
-      if (room) {
-        Object.assign(room, patch)
-        if (patch.status === 'Ended' && room.winnerUserId) {
-          room.paymentStatus = room.paymentStatus === 'Paid' ? 'Paid' : 'Awaiting Winner Payment'
-          room.settlementStatus = room.settlementStatus === 'Released' ? 'Released' : 'On Hold'
-        }
-        addLog(draft, `Admin updated room ${room.title}.`)
-      }
-      return draft
-    })
-  }
+  function adminUpdateRoom(roomId, patch) { setState((prev) => { const draft = clone(prev); const room = draft.rooms.find((item) => item.id === roomId); if (room) { Object.assign(room, patch); if (patch.status === 'Ended' && room.winnerUserId) { room.paymentStatus = room.paymentStatus === 'Paid' ? 'Paid' : 'Awaiting Winner Payment'; room.settlementStatus = room.settlementStatus === 'Released' ? 'Released' : 'On Hold' } addLog(draft, `Admin updated room ${room.title}.`) } return draft }) }
 
-  function adminMarkWinnerPaid(roomId) {
-    let result = { ok: true, message: 'Winner marked as paid.' }
-    setState((prev) => {
-      const draft = clone(prev)
-      const room = draft.rooms.find((item) => item.id === roomId)
-      const activeBid = room?.bids?.find((bid) => bid.status === 'active')
-      if (!room || !activeBid) { result = { ok: false, message: 'No active winning bid found.' }; return prev }
-      const winner = draft.users.find((user) => user.id === activeBid.userId)
-      if (!winner) { result = { ok: false, message: 'Winner user not found.' }; return prev }
-      const remainder = activeBid.amount - activeBid.pendingAmount
-      if (winner.wallet.available < remainder) { result = { ok: false, message: `Winner lacks remaining credit. Need ${remainder.toLocaleString()} AC available. Use Failed Payment or top up first.` }; return prev }
-      winner.wallet.available -= remainder
-      winner.wallet.pending = Math.max(0, winner.wallet.pending - activeBid.pendingAmount)
-      winner.score = Number(winner.score || 0) + 15
-      winner.winsPaid = Number(winner.winsPaid || 0) + 1
-      winner.totalWonValue = Number(winner.totalWonValue || 0) + activeBid.amount
-      winner.winHistory = [{ id: nextId('win'), roomTitle: room.title, amount: activeBid.amount, paidAt: new Date().toISOString() }, ...(winner.winHistory || [])]
-      addTx(winner, 'Win Payment', -activeBid.amount, `Paid winning bid for ${room.title}`)
-      room.bids = room.bids.map((bid) => (bid.id === activeBid.id ? { ...bid, status: 'paid' } : bid))
-      room.status = 'Ended'; room.paymentStatus = 'Paid'; room.settlementStatus = 'Ready for Seller Settlement'
-      addLog(draft, `Admin marked ${winner.name} as paid for ${room.title}. Score +15.`)
-      return draft
-    })
-    return result
-  }
+  function adminPauseRoom(roomId) { adminUpdateRoom(roomId, { status: 'Paused', settlementStatus: 'Temporarily Paused by Admin' }); return { ok: true, message: 'Room paused by admin.' } }
+  function adminLockRoom(roomId) { adminUpdateRoom(roomId, { status: 'Locked', settlementStatus: 'Locked by Admin' }); return { ok: true, message: 'Room locked by admin.' } }
+  function adminResumeRoom(roomId) { adminUpdateRoom(roomId, { status: 'Live', settlementStatus: 'Waiting Auction End' }); return { ok: true, message: 'Room resumed to Live.' } }
+  function adminBanMember(userId, roomId) { setState((prev) => { const draft = clone(prev); const user = draft.users.find((item) => item.id === userId); const room = draft.rooms.find((item) => item.id === roomId); if (user) { user.isBanned = true; user.bannedReason = `Violation in ${room?.title || 'auction room'}`; user.kycStatus = 'Rejected'; addLog(draft, `Admin banned ${user.name} from platform for room violation.`) } return draft }); return { ok: true, message: 'Member banned and KYC marked rejected.' } }
 
-  function adminMarkFailedPayment(roomId) {
-    let result = { ok: true, message: 'Failed payment applied.' }
-    setState((prev) => {
-      const draft = clone(prev)
-      const room = draft.rooms.find((item) => item.id === roomId)
-      const activeBid = room?.bids?.find((bid) => bid.status === 'active')
-      if (!room || !activeBid) { result = { ok: false, message: 'No active winning bid found.' }; return prev }
-      const winner = draft.users.find((user) => user.id === activeBid.userId)
-      if (!winner) { result = { ok: false, message: 'Winner user not found.' }; return prev }
-      winner.wallet.pending = Math.max(0, winner.wallet.pending - activeBid.pendingAmount)
-      winner.score = Number(winner.score || 0) - 30
-      winner.failedPayments = [new Date().toISOString(), ...(winner.failedPayments || [])]
-      addTx(winner, 'Penalty', -activeBid.pendingAmount, `Failed payment penalty lost pending in ${room.title}`)
-      room.bids = room.bids.map((bid) => (bid.id === activeBid.id ? { ...bid, status: 'failed' } : bid))
-      room.status = 'Ended'; room.paymentStatus = 'Failed Payment'; room.settlementStatus = 'Cancelled / Pending Admin Review'
-      addLog(draft, `Admin marked failed payment for ${winner.name}. Pending seized and score -30.`)
-      return draft
-    })
-    return result
-  }
+  function adminMarkWinnerPaid(roomId) { let result = { ok: true, message: 'Winner marked as paid.' }; setState((prev) => { const draft = clone(prev); const room = draft.rooms.find((item) => item.id === roomId); const activeBid = room?.bids?.find((bid) => bid.status === 'active'); if (!room || !activeBid) { result = { ok: false, message: 'No active winning bid found.' }; return prev } const winner = draft.users.find((user) => user.id === activeBid.userId); if (!winner) { result = { ok: false, message: 'Winner user not found.' }; return prev } const remainder = activeBid.amount - activeBid.pendingAmount; if (winner.wallet.available < remainder) { result = { ok: false, message: `Winner lacks remaining credit. Need ${remainder.toLocaleString()} AC available. Use Failed Payment or top up first.` }; return prev } winner.wallet.available -= remainder; winner.wallet.pending = Math.max(0, winner.wallet.pending - activeBid.pendingAmount); winner.score = Number(winner.score || 0) + 15; winner.winsPaid = Number(winner.winsPaid || 0) + 1; winner.totalWonValue = Number(winner.totalWonValue || 0) + activeBid.amount; winner.winHistory = [{ id: nextId('win'), roomTitle: room.title, amount: activeBid.amount, paidAt: new Date().toISOString() }, ...(winner.winHistory || [])]; addTx(winner, 'Win Payment', -activeBid.amount, `Paid winning bid for ${room.title}`); room.bids = room.bids.map((bid) => (bid.id === activeBid.id ? { ...bid, status: 'paid' } : bid)); room.status = 'Ended'; room.paymentStatus = 'Paid'; room.settlementStatus = 'Ready for Seller Settlement'; addLog(draft, `Admin marked ${winner.name} as paid for ${room.title}. Score +15.`); return draft }); return result }
+  function adminMarkFailedPayment(roomId) { let result = { ok: true, message: 'Failed payment applied.' }; setState((prev) => { const draft = clone(prev); const room = draft.rooms.find((item) => item.id === roomId); const activeBid = room?.bids?.find((bid) => bid.status === 'active'); if (!room || !activeBid) { result = { ok: false, message: 'No active winning bid found.' }; return prev } const winner = draft.users.find((user) => user.id === activeBid.userId); if (!winner) { result = { ok: false, message: 'Winner user not found.' }; return prev } winner.wallet.pending = Math.max(0, winner.wallet.pending - activeBid.pendingAmount); winner.score = Number(winner.score || 0) - 30; winner.failedPayments = [new Date().toISOString(), ...(winner.failedPayments || [])]; addTx(winner, 'Penalty', -activeBid.pendingAmount, `Failed payment penalty lost pending in ${room.title}`); room.bids = room.bids.map((bid) => (bid.id === activeBid.id ? { ...bid, status: 'failed' } : bid)); room.status = 'Ended'; room.paymentStatus = 'Failed Payment'; room.settlementStatus = 'Cancelled / Pending Admin Review'; addLog(draft, `Admin marked failed payment for ${winner.name}. Pending seized and score -30.`); return draft }); return result }
+  function adminApplyPenalty(userId) { setState((prev) => { const draft = clone(prev); const user = draft.users.find((item) => item.id === userId); if (user) { user.score = Number(user.score || 0) - 30; user.failedPayments = [new Date().toISOString(), ...(user.failedPayments || [])]; addTx(user, 'Penalty', 0, 'Manual admin penalty: score -30'); addLog(draft, `Admin applied manual penalty to ${user.name}.`) } return draft }) }
+  function adminReleaseSettlement(roomId) { let result = { ok: true, message: 'Settlement released.' }; setState((prev) => { const draft = clone(prev); const room = draft.rooms.find((item) => item.id === roomId); const paidBid = room?.bids?.find((bid) => bid.status === 'paid'); if (!room || !paidBid || room.paymentStatus !== 'Paid') { result = { ok: false, message: 'Room must be paid before settlement release.' }; return prev } if (room.settlementStatus === 'Released') { result = { ok: false, message: 'Settlement already released.' }; return prev } const seller = draft.users.find((user) => user.id === room.sellerId); const platformFee = Math.ceil(paidBid.amount * room.commissionRate); const settlement = paidBid.amount - platformFee; if (seller) { seller.wallet.available += settlement; addTx(seller, 'Settlement', settlement, `Seller settlement for ${room.title} after 10% platform fee`) } room.settlementStatus = 'Released'; room.platformFee = platformFee; room.sellerSettlement = settlement; addLog(draft, `Admin released seller settlement for ${room.title}. Fee: ${platformFee.toLocaleString()} AC.`); return draft }); return result }
 
-  function adminApplyPenalty(userId) {
-    setState((prev) => {
-      const draft = clone(prev)
-      const user = draft.users.find((item) => item.id === userId)
-      if (user) { user.score = Number(user.score || 0) - 30; user.failedPayments = [new Date().toISOString(), ...(user.failedPayments || [])]; addTx(user, 'Penalty', 0, 'Manual admin penalty: score -30'); addLog(draft, `Admin applied manual penalty to ${user.name}.`) }
-      return draft
-    })
-  }
-
-  function adminReleaseSettlement(roomId) {
-    let result = { ok: true, message: 'Settlement released.' }
-    setState((prev) => {
-      const draft = clone(prev)
-      const room = draft.rooms.find((item) => item.id === roomId)
-      const paidBid = room?.bids?.find((bid) => bid.status === 'paid')
-      if (!room || !paidBid || room.paymentStatus !== 'Paid') { result = { ok: false, message: 'Room must be paid before settlement release.' }; return prev }
-      if (room.settlementStatus === 'Released') { result = { ok: false, message: 'Settlement already released.' }; return prev }
-      const seller = draft.users.find((user) => user.id === room.sellerId)
-      const platformFee = Math.ceil(paidBid.amount * room.commissionRate)
-      const settlement = paidBid.amount - platformFee
-      if (seller) { seller.wallet.available += settlement; addTx(seller, 'Settlement', settlement, `Seller settlement for ${room.title} after 10% platform fee`) }
-      room.settlementStatus = 'Released'; room.platformFee = platformFee; room.sellerSettlement = settlement
-      addLog(draft, `Admin released seller settlement for ${room.title}. Fee: ${platformFee.toLocaleString()} AC.`)
-      return draft
-    })
-    return result
-  }
-
-  function setCurrentUser(userId) {
-    setState((prev) => ({ ...ensureDemoUsers(prev), currentUserId: userId }))
-  }
-
-  function resetDemo() {
-    localStorage.removeItem(STORAGE_KEY)
-    setState(ensureDemoUsers(initialState))
-  }
+  function setCurrentUser(userId) { setState((prev) => ({ ...ensureDemoUsers(prev), currentUserId: userId })) }
+  function resetDemo() { localStorage.removeItem(STORAGE_KEY); setState(ensureDemoUsers(initialState)) }
 
   const value = {
     state, currentUser, currentMemberLevel,
     followedRooms: state.rooms.filter((room) => state.followedRoomIds.includes(room.id)),
     updateCurrentUser, submitKyc, topUpCredit, toggleFollowRoom, placeBid, submitSellerProduct,
-    adminUpdateUser, adminUpdateProduct, adminCreateRoom, adminUpdateRoom, adminMarkWinnerPaid,
-    adminMarkFailedPayment, adminApplyPenalty, adminReleaseSettlement, setCurrentUser, resetDemo, getPendingRate,
+    adminUpdateUser, adminUpdateProduct, adminCreateRoom, adminUpdateRoom, adminPauseRoom, adminLockRoom, adminResumeRoom, adminBanMember,
+    adminMarkWinnerPaid, adminMarkFailedPayment, adminApplyPenalty, adminReleaseSettlement, setCurrentUser, resetDemo, getPendingRate,
   }
 
   return <AuctionContext.Provider value={value}>{children}</AuctionContext.Provider>
