@@ -51,7 +51,7 @@ export default function AdminDashboard() {
 
   const totalPending = useMemo(() => state.users.reduce((sum, user) => sum + Number(user.wallet.pending || 0), 0), [state.users])
   const awaitingPayment = state.rooms.filter((room) => room.paymentStatus === 'Awaiting Winner Payment' || room.bids.some((bid) => bid.status === 'active')).length
-  const pendingWithdraws = withdrawRequests.filter((request) => request.status === 'Pending Review')
+  const pendingWithdraws = withdrawRequests.filter((request) => request.status === 'Pending')
 
   function flash(resultOrMessage) {
     if (typeof resultOrMessage === 'string') setMessage(resultOrMessage)
@@ -71,7 +71,7 @@ export default function AdminDashboard() {
 
   function reviewWithdraw(requestId, decision) {
     const request = withdrawRequests.find((item) => item.id === requestId)
-    if (!request || request.status !== 'Pending Review') {
+    if (!request || request.status !== 'Pending') {
       flash('Request not found or already reviewed.')
       return
     }
@@ -179,8 +179,8 @@ export default function AdminDashboard() {
                   {request.reviewNote ? <p className="mt-3 rounded-2xl bg-black/30 p-3 text-sm text-slate-300">Admin note: {request.reviewNote}</p> : null}
                 </div>
                 <div className="flex flex-wrap gap-2 lg:justify-end">
-                  <button className="btn-secondary !px-3 !py-2" disabled={request.status !== 'Pending Review'} onClick={() => reviewWithdraw(request.id, 'Approved')}>Approve</button>
-                  <button className="btn-danger !px-3 !py-2" disabled={request.status !== 'Pending Review'} onClick={() => reviewWithdraw(request.id, 'Rejected')}>Reject</button>
+                  <button className="btn-secondary !px-3 !py-2" disabled={request.status !== 'Pending'} onClick={() => reviewWithdraw(request.id, 'Approved')}>Approve</button>
+                  <button className="btn-danger !px-3 !py-2" disabled={request.status !== 'Pending'} onClick={() => reviewWithdraw(request.id, 'Rejected')}>Reject</button>
                 </div>
               </div>
             </div>

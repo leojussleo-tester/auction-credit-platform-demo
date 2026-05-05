@@ -324,6 +324,15 @@ export function AuctionProvider({ children }) {
     setState((prev) => ({ ...ensureDemoUsers(prev), currentUserId: userId }))
   }
 
+  function registerUser(account) {
+    setState((prev) => {
+      const draft = clone(ensureDemoUsers(prev))
+      draft.users = [account, ...draft.users]
+      addLog(draft, `${account.name} registered a new ${account.role} account.`)
+      return draft
+    })
+  }
+
   function resetDemo() {
     localStorage.removeItem(STORAGE_KEY)
     setState(ensureDemoUsers(initialState))
@@ -334,7 +343,7 @@ export function AuctionProvider({ children }) {
     followedRooms: state.rooms.filter((room) => state.followedRoomIds.includes(room.id)),
     updateCurrentUser, submitKyc, topUpCredit, toggleFollowRoom, placeBid, submitSellerProduct,
     adminUpdateUser, adminUpdateProduct, adminCreateRoom, adminUpdateRoom, adminMarkWinnerPaid,
-    adminMarkFailedPayment, adminApplyPenalty, adminReleaseSettlement, setCurrentUser, resetDemo, getPendingRate,
+    adminMarkFailedPayment, adminApplyPenalty, adminReleaseSettlement, setCurrentUser, registerUser, resetDemo, getPendingRate,
   }
 
   return <AuctionContext.Provider value={value}>{children}</AuctionContext.Provider>

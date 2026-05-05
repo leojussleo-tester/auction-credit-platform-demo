@@ -71,7 +71,7 @@ export default function Wallet() {
       bankAccount: withdrawForm.bankAccount,
       accountName: withdrawForm.accountName,
       note: withdrawForm.note,
-      status: 'Pending Review',
+      status: 'Pending',
       createdAt: new Date().toISOString(),
       reviewedAt: null,
       reviewNote: '',

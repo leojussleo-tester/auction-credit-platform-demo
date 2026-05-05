@@ -8,6 +8,8 @@ function roleLabel(role) {
   return 'MEMBER'
 }
 
+const normalizedRole = (role) => (role === 'buyer' ? 'member' : role)
+
 function tierLabel(user, currentMemberLevel) {
   if (user?.role === 'admin') return 'STAFF'
   if (user?.role === 'seller') return user.sellerTier || currentMemberLevel
@@ -16,7 +18,7 @@ function tierLabel(user, currentMemberLevel) {
 
 export default function Layout({ children, route, onLogout }) {
   const { currentUser, currentMemberLevel, resetDemo } = useAuction()
-  const role = currentUser?.role || 'buyer'
+  const role = normalizedRole(currentUser?.role || 'member')
   const navItems = [
     { label: 'Home', href: '#/' },
     ...(role !== 'admin' ? [{ label: 'Bid Lobby', href: '#/bid' }] : []),
