@@ -10,9 +10,8 @@ import BidPage from './pages/BidPage'
 import BidRoom from './pages/BidRoom'
 import SellerDashboard from './pages/SellerDashboard'
 import AdminDashboard from './pages/AdminDashboard'
-import { DEMO_ACCOUNTS } from './data/demoAccounts'
 
-const AUTH_KEY = 'auction_platform_login_v2_user_id'
+const AUTH_KEY = 'auction_platform_session_user_id'
 
 function getRoute() {
   const hash = window.location.hash.replace('#', '')
@@ -47,15 +46,15 @@ function Router({ onLogout }) {
 }
 
 function AuthGate() {
-  const { setCurrentUser } = useAuction()
-  const [selectedUserId, setSelectedUserId] = useState(() => localStorage.getItem(AUTH_KEY) || '')
+  const { setCurrentUser, state, registerUser } = useAuction()
+  const [selectedUserId, setSelectedUserId] = useState(() => sessionStorage.getItem(AUTH_KEY) || '')
   const [loading, setLoading] = useState(false)
 
-  const loginUsers = useMemo(() => DEMO_ACCOUNTS, [])
+  const loginUsers = useMemo(() => state.users, [state.users])
 
   useEffect(() => {
     if (!selectedUserId) return
-    localStorage.setItem(AUTH_KEY, selectedUserId)
+    sessionStorage.setItem(AUTH_KEY, selectedUserId)
     setCurrentUser(selectedUserId)
   }, [selectedUserId, setCurrentUser])
 
@@ -70,13 +69,20 @@ function AuthGate() {
   }
 
   function handleLogout() {
-    localStorage.removeItem(AUTH_KEY)
+    sessionStorage.removeItem(AUTH_KEY)
     setSelectedUserId('')
     window.location.hash = '#/'
   }
 
+  function handleRegister(payload) {
+    const result = registerUser(payload)
+    if (!result.ok) return result
+    handleLogin(result.userId)
+    return { ok: true }
+  }
+
   if (loading) return <LoadingScreen />
-  if (!selectedUserId) return <LoginPage users={loginUsers} onLogin={handleLogin} />
+  if (!selectedUserId) return <LoginPage users={loginUsers} onLogin={handleLogin} onRegister={handleRegister} />
 
   return <Router onLogout={handleLogout} />
 }
