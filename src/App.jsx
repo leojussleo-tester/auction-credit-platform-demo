@@ -35,8 +35,8 @@ function Router({ onLogout }) {
   const role = currentUser?.role
 
   let page = <Home />
-  if (role !== 'admin' && route === '/account') page = <AccountKYC />
-  if (role !== 'admin' && route === '/wallet') page = <Wallet />
+  if (route === '/account') page = <AccountKYC />
+  if (route === '/wallet') page = <Wallet />
   if (route === '/bid') page = <BidPage />
   if (roomMatch) page = <BidRoom roomId={roomMatch[1]} />
   if (route === '/seller') page = role === 'seller' ? <SellerDashboard /> : <Home />
