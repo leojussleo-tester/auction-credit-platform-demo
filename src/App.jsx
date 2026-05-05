@@ -48,14 +48,14 @@ function Router({ onLogout }) {
 
 function AuthGate() {
   const { setCurrentUser } = useAuction()
-  const [selectedUserId, setSelectedUserId] = useState(() => localStorage.getItem(AUTH_KEY) || '')
+  const [selectedUserId, setSelectedUserId] = useState('')
   const [loading, setLoading] = useState(false)
 
   const loginUsers = useMemo(() => DEMO_ACCOUNTS, [])
 
   useEffect(() => {
+    localStorage.removeItem(AUTH_KEY)
     if (!selectedUserId) return
-    localStorage.setItem(AUTH_KEY, selectedUserId)
     setCurrentUser(selectedUserId)
   }, [selectedUserId, setCurrentUser])
 
