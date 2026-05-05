@@ -19,8 +19,9 @@ export default function Layout({ children, route, onLogout }) {
   const role = currentUser?.role || 'buyer'
   const navItems = [
     { label: 'Home', href: '#/' },
-    ...(role !== 'admin' ? [{ label: 'Bid Lobby', href: '#/bid' }] : []),
-    ...(role !== 'admin' ? [{ label: 'My Wallet', href: '#/wallet' }, { label: 'My Info', href: '#/account' }] : []),
+    { label: 'Bid Lobby', href: '#/bid' },
+    { label: 'My Wallet', href: '#/wallet' },
+    { label: 'My Info', href: '#/account' },
     ...(role === 'seller' ? [{ label: 'Seller Mode', href: '#/seller' }] : []),
     ...(role === 'admin' ? [{ label: 'Admin System', href: '#/admin' }] : []),
   ]
@@ -75,16 +76,15 @@ export default function Layout({ children, route, onLogout }) {
               <div><p className="font-black text-white">{currentUser?.name}</p><p className="text-xs text-slate-400">{currentUser?.email}</p></div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2"><Badge>{roleLabel(role)}</Badge><Badge>{tierLabel(currentUser, currentMemberLevel)}</Badge><Badge>{currentUser?.kycStatus}</Badge></div>
-            {role !== 'admin' ? (
-              <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                <div className="soft-card p-3"><p className="text-slate-300">Available</p><p className="font-black text-white">{money(currentUser?.wallet?.available)}</p></div>
-                <div className="soft-card p-3"><p className="text-slate-300">Pending</p><p className="font-black text-auction-gold">{money(currentUser?.wallet?.pending)}</p></div>
+            <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+              <div className="soft-card p-3"><p className="text-slate-300">Available</p><p className="font-black text-white">{money(currentUser?.wallet?.available)}</p></div>
+              <div className="soft-card p-3"><p className="text-slate-300">Pending</p><p className="font-black text-auction-gold">{money(currentUser?.wallet?.pending)}</p></div>
+            </div>
+            {role === 'admin' ? (
+              <div className="mt-4 rounded-2xl border border-auction-gold/25 bg-auction-gold/10 p-4 text-sm leading-6 text-slate-200">
+                Staff access: có đủ Bid Lobby, My Wallet, My Info và Admin System để kiểm tra flow như member/seller.
               </div>
-            ) : (
-              <div className="mt-5 rounded-2xl border border-auction-gold/25 bg-auction-gold/10 p-4 text-sm leading-6 text-slate-200">
-                Staff access: room operations, product verification, reports, seller locks and wallet requests.
-              </div>
-            )}
+            ) : null}
             <button onClick={resetDemo} className="btn-secondary mt-4 w-full">Reset Demo Data</button>
           </div>
 
