@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { STORAGE_KEY, initialState } from '../data/mockData'
+import { getDemoAccount, DEMO_ACCOUNTS } from '../data/demoAccounts'
 import {
   calculateMemberLevel,
   calculatePendingAmount,
@@ -10,15 +11,22 @@ import {
 
 const AuctionContext = createContext(null)
 
+function ensureDemoUsers(state) {
+  const existingIds = new Set((state.users || []).map((user) => user.id))
+  const missing = DEMO_ACCOUNTS.filter((account) => !existingIds.has(account.id))
+  if (!missing.length) return state
+  return { ...state, users: [...(state.users || []), ...missing] }
+}
+
 function loadState() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return initialState
+    if (!saved) return ensureDemoUsers(initialState)
     const parsed = JSON.parse(saved)
-    return { ...initialState, ...parsed }
+    return ensureDemoUsers({ ...initialState, ...parsed })
   } catch (error) {
     console.warn('Failed to load localStorage state:', error)
-    return initialState
+    return ensureDemoUsers(initialState)
   }
 }
 
@@ -54,7 +62,7 @@ export function AuctionProvider({ children }) {
   }, [state])
 
   const currentUser = useMemo(
-    () => state.users.find((user) => user.id === state.currentUserId),
+    () => state.users.find((user) => user.id === state.currentUserId) || state.users[0],
     [state.users, state.currentUserId]
   )
 
@@ -157,16 +165,9 @@ export function AuctionProvider({ children }) {
         if (oldUser) {
           oldUser.wallet.pending = Math.max(0, oldUser.wallet.pending - activeBid.pendingAmount)
           oldUser.wallet.available += activeBid.pendingAmount
-          addTx(
-            oldUser,
-            'Refund',
-            activeBid.pendingAmount,
-            `Outbid refund from ${room.title}`
-          )
+          addTx(oldUser, 'Refund', activeBid.pendingAmount, `Outbid refund from ${room.title}`)
         }
-        room.bids = room.bids.map((bid) =>
-          bid.id === activeBid.id ? { ...bid, status: 'outbid' } : bid
-        )
+        room.bids = room.bids.map((bid) => bid.id === activeBid.id ? { ...bid, status: 'outbid' } : bid)
       }
 
       user.wallet.available -= pendingAmount
@@ -330,10 +331,7 @@ export function AuctionProvider({ children }) {
 
       const remainder = activeBid.amount - activeBid.pendingAmount
       if (winner.wallet.available < remainder) {
-        result = {
-          ok: false,
-          message: `Winner lacks remaining credit. Need ${remainder.toLocaleString()} AC available. Use Failed Payment or top up first.`,
-        }
+        result = { ok: false, message: `Winner lacks remaining credit. Need ${remainder.toLocaleString()} AC available. Use Failed Payment or top up first.` }
         return prev
       }
 
@@ -342,22 +340,13 @@ export function AuctionProvider({ children }) {
       winner.score = Number(winner.score || 0) + 15
       winner.winsPaid = Number(winner.winsPaid || 0) + 1
       winner.totalWonValue = Number(winner.totalWonValue || 0) + activeBid.amount
-      winner.winHistory = [
-        {
-          id: nextId('win'),
-          roomTitle: room.title,
-          amount: activeBid.amount,
-          paidAt: new Date().toISOString(),
-        },
-        ...(winner.winHistory || []),
-      ]
+      winner.winHistory = [{ id: nextId('win'), roomTitle: room.title, amount: activeBid.amount, paidAt: new Date().toISOString() }, ...(winner.winHistory || [])]
       addTx(winner, 'Win Payment', -activeBid.amount, `Paid winning bid for ${room.title}`)
 
       room.bids = room.bids.map((bid) => (bid.id === activeBid.id ? { ...bid, status: 'paid' } : bid))
       room.status = 'Ended'
       room.paymentStatus = 'Paid'
       room.settlementStatus = 'Ready for Seller Settlement'
-
       addLog(draft, `Admin marked ${winner.name} as paid for ${room.title}. Score +15.`)
       return draft
     })
@@ -384,12 +373,10 @@ export function AuctionProvider({ children }) {
       winner.score = Number(winner.score || 0) - 30
       winner.failedPayments = [new Date().toISOString(), ...(winner.failedPayments || [])]
       addTx(winner, 'Penalty', -activeBid.pendingAmount, `Failed payment penalty lost pending in ${room.title}`)
-
       room.bids = room.bids.map((bid) => (bid.id === activeBid.id ? { ...bid, status: 'failed' } : bid))
       room.status = 'Ended'
       room.paymentStatus = 'Failed Payment'
       room.settlementStatus = 'Cancelled / Pending Admin Review'
-
       addLog(draft, `Admin marked failed payment for ${winner.name}. Pending seized and score -30.`)
       return draft
     })
@@ -441,12 +428,19 @@ export function AuctionProvider({ children }) {
   }
 
   function setCurrentUser(userId) {
-    setState((prev) => ({ ...prev, currentUserId: userId }))
+    setState((prev) => {
+      const draft = clone(ensureDemoUsers(prev))
+      if (!draft.users.some((user) => user.id === userId)) {
+        const account = getDemoAccount(userId)
+        if (account) draft.users.push(account)
+      }
+      return { ...draft, currentUserId: userId }
+    })
   }
 
   function resetDemo() {
     localStorage.removeItem(STORAGE_KEY)
-    setState(initialState)
+    setState(ensureDemoUsers(initialState))
   }
 
   const value = {
