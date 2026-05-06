@@ -114,3 +114,8 @@ main .btn-secondary,
 main .btn-secondary * {
   color: #f8fafc !important;
 }
+
+/* Admin System keeps only pending request queues. The full finance review log lives in the separate Admin Review History tab. */
+main section.glass-card:has(h2):has(+ section.grid) {
+  display: none !important;
+}
