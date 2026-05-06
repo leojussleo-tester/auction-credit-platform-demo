@@ -9,9 +9,9 @@ const WITHDRAW_KEY = 'auction-credit-withdraw-requests-v1'
 const DEPOSIT_KEY = 'auction-credit-deposit-requests-v1'
 const AC_TO_VND = 1000
 const BANK_INFO = {
-  bank: 'ACB - Auction Credit Demo',
-  account: '6868686868',
-  holder: 'AUCTION CREDIT PLATFORM',
+  bank: 'Techcom Bank',
+  account: '797979292929',
+  holder: 'LE HONG PHUC',
 }
 
 function loadStore(key) {
@@ -27,7 +27,7 @@ function txCode() {
   return `${a}${b}${nums}`
 }
 function qrUrl(request) {
-  const text = `BANK:${BANK_INFO.bank}\nSTK:${BANK_INFO.account}\nNAME:${BANK_INFO.holder}\nAMOUNT:${request.vndAmount}\nCONTENT:${request.transactionCode}`
+  const text = `BANK:${request.bank}\nSTK:${request.bankAccount}\nNAME:${request.accountHolder}\nAMOUNT:${request.vndAmount}\nCONTENT:${request.transactionCode}`
   return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(text)}`
 }
 
@@ -178,7 +178,7 @@ export default function Wallet() {
               <p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Top Up / Nạp Credit</p>
               <h2 className="mt-2 text-2xl font-black text-white">Tạo yêu cầu nạp Credit</h2>
             </div>
-            <Badge tone="default">Bank Transfer</Badge>
+            <Badge tone="default">Techcom Bank</Badge>
           </div>
           <label className="mt-6 block">
             <span className="label">Số Credit cần nạp</span>
