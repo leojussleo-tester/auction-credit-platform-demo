@@ -15,6 +15,57 @@ function saveStore(key, value) { localStorage.setItem(key, JSON.stringify(value)
 function vnd(value) { return `${Number(value || 0).toLocaleString('vi-VN')} VNĐ` }
 function txCode() { const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; return `${letters[Math.floor(Math.random() * 26)]}${letters[Math.floor(Math.random() * 26)]}${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}` }
 function qrUrl(request) { return `https://img.vietqr.io/image/${request.bankCode || BANK_INFO.bankCode}-${request.bankAccount || BANK_INFO.account}-compact2.png?amount=${Number(request.vndAmount || 0)}&addInfo=${encodeURIComponent(request.transactionCode || '')}&accountName=${encodeURIComponent(request.accountHolder || BANK_INFO.holder)}` }
+function statusTone(status) { if (status === 'Approved') return 'Approved'; if (status === 'Rejected') return 'Rejected'; if (status === 'Pending Admin Review' || status === 'Pending Review') return 'Pending'; return 'default' }
+
+function DepositModal({ request, mode, error, success, onClose, onUploadBill, onSubmit }) {
+  if (!request) return null
+  const readonly = mode === 'detail' || ['Pending Admin Review', 'Approved', 'Rejected'].includes(request.status)
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/75 p-3 backdrop-blur-md md:items-center">
+      <div className="glass-card max-h-[92vh] w-full max-w-3xl overflow-y-auto p-5 md:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Deposit Request</p>
+            <h2 className="mt-2 text-3xl font-black text-white">Thông tin chuyển khoản</h2>
+            <p className="muted mt-2">Quét VietQR, chuyển đúng số tiền và nội dung mã GD. Sau đó upload bill và gửi yêu cầu nạp.</p>
+          </div>
+          <button onClick={onClose} className="btn-secondary !px-4 !py-2">Đóng</button>
+        </div>
+
+        {success ? <div className="mt-5 rounded-3xl border border-emerald-300/40 bg-emerald-500/15 p-4 text-sm font-bold leading-6 text-emerald-100">Đã gửi yêu cầu nạp. Vui lòng đợi Admin xử lý, thời gian xử lý tối đa 15 phút. Bạn có thể tắt pop-up sau khi hoàn thành.</div> : null}
+        {error ? <div className="mt-5 rounded-3xl border border-rose-400/50 bg-rose-500/15 p-4 text-sm font-bold text-rose-100">{error}</div> : null}
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_260px]">
+          <div className="soft-card p-4">
+            <div className="flex flex-wrap gap-2"><Badge tone={statusTone(request.status)}>{request.status}</Badge><Badge>{request.transactionCode}</Badge></div>
+            <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
+              <p>Nạp: <strong className="text-auction-gold">{money(request.creditAmount)}</strong></p>
+              <p>Số tiền: <strong className="text-white">{vnd(request.vndAmount)}</strong></p>
+              <p>Bank: <strong className="text-white">{request.bank}</strong></p>
+              <p>STK: <strong className="text-white">{request.bankAccount}</strong></p>
+              <p className="md:col-span-2">Chủ TK: <strong className="text-white">{request.accountHolder}</strong></p>
+              <p className="md:col-span-2">Mã GD / Nội dung CK: <strong className="text-auction-gold">{request.transactionCode}</strong></p>
+            </div>
+
+            <label className="mt-5 block">
+              <span className={`label ${error ? '!text-rose-200' : ''}`}>Upload bill chuyển khoản bắt buộc</span>
+              <input className={`field ${error ? '!border-rose-400 !bg-rose-500/10' : ''}`} type="file" accept="image/*" disabled={readonly || success} onChange={(e) => onUploadBill(e.target.files?.[0])} />
+            </label>
+            {request.billName ? <p className="mt-2 text-sm text-slate-300">Bill: <strong className="text-white">{request.billName}</strong></p> : <p className="mt-2 text-sm text-slate-400">Chưa có bill đính kèm.</p>}
+            <p className="mt-2 text-xs text-slate-400">Created {formatDateTime(request.createdAt)}{request.submittedAt ? ` · Sent ${formatDateTime(request.submittedAt)}` : ''}{request.reviewedAt ? ` · Reviewed ${formatDateTime(request.reviewedAt)}` : ''}</p>
+            {request.reviewNote ? <p className="mt-4 rounded-2xl bg-black/30 p-3 text-sm text-slate-300">Admin note: {request.reviewNote}</p> : null}
+
+            {mode === 'create' ? <button className="btn-primary mt-5 w-full" disabled={success} onClick={onSubmit}>Gửi yêu cầu nạp</button> : null}
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-center">
+            <img src={qrUrl(request)} alt={`VietQR ${request.transactionCode}`} className="mx-auto rounded-2xl bg-white p-2" />
+            <p className="mt-3 text-xs leading-5 text-slate-300">VietQR ngân hàng: Techcom Bank, STK, số tiền và mã GD.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function WalletFixed() {
   const { state, currentUser, currentMemberLevel, updateCurrentUser } = useAuction()
@@ -24,7 +75,10 @@ export default function WalletFixed() {
   const [withdrawForm, setWithdrawForm] = useState({ amount: 1000, bankName: 'Demo Bank', bankAccount: currentUser.phone || '', accountName: currentUser.name, note: '' })
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('success')
-  const [depositErrorId, setDepositErrorId] = useState('')
+  const [activeDeposit, setActiveDeposit] = useState(null)
+  const [depositModalMode, setDepositModalMode] = useState('create')
+  const [depositModalError, setDepositModalError] = useState('')
+  const [depositSentSuccess, setDepositSentSuccess] = useState(false)
 
   const userDepositRequests = depositRequests.filter((request) => request.userId === currentUser.id)
   const userWithdrawRequests = withdrawRequests.filter((request) => request.userId === currentUser.id)
@@ -34,26 +88,26 @@ export default function WalletFixed() {
   function createDepositRequest() {
     const creditAmount = Number(amount)
     if (!creditAmount || creditAmount <= 0) return notify('Số credit cần nạp phải lớn hơn 0.', 'error')
-    const request = { id: `dep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, userId: currentUser.id, userName: currentUser.name, userRole: currentUser.role, creditAmount, vndAmount: creditAmount * AC_TO_VND, bank: BANK_INFO.bank, bankCode: BANK_INFO.bankCode, bankAccount: BANK_INFO.account, accountHolder: BANK_INFO.holder, transactionCode: txCode(), status: 'Waiting Bill', billName: '', createdAt: new Date().toISOString(), billUploadedAt: null, submittedAt: null, reviewedAt: null, reviewNote: '' }
-    const next = [request, ...depositRequests]
-    setDepositRequests(next); saveStore(DEPOSIT_KEY, next); setDepositErrorId('')
-    notify('Đã tạo VietQR. Hãy chuyển khoản, upload bill rồi bấm Gửi yêu cầu nạp.')
+    const draft = { id: `dep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, userId: currentUser.id, userName: currentUser.name, userRole: currentUser.role, creditAmount, vndAmount: creditAmount * AC_TO_VND, bank: BANK_INFO.bank, bankCode: BANK_INFO.bankCode, bankAccount: BANK_INFO.account, accountHolder: BANK_INFO.holder, transactionCode: txCode(), status: 'Waiting Bill', billName: '', createdAt: new Date().toISOString(), billUploadedAt: null, submittedAt: null, reviewedAt: null, reviewNote: '' }
+    setActiveDeposit(draft); setDepositModalMode('create'); setDepositModalError(''); setDepositSentSuccess(false)
+    notify('Đã tạo thông tin chuyển khoản. Hoàn tất trong pop-up để gửi yêu cầu nạp.')
   }
-  function uploadDepositBill(requestId, file) {
-    if (!file) return
-    const next = depositRequests.map((request) => request.id === requestId ? { ...request, status: request.status === 'Pending Admin Review' ? request.status : 'Bill Uploaded', billName: file.name || `bill-${request.transactionCode}.png`, billUploadedAt: new Date().toISOString() } : request)
-    setDepositRequests(next); saveStore(DEPOSIT_KEY, next); setDepositErrorId('')
-    notify('Đã upload bill. Bấm Gửi yêu cầu nạp để Admin nhận yêu cầu.')
+  function uploadDepositBill(file) {
+    if (!file || !activeDeposit) return
+    setActiveDeposit({ ...activeDeposit, status: 'Bill Uploaded', billName: file.name || `bill-${activeDeposit.transactionCode}.png`, billUploadedAt: new Date().toISOString() })
+    setDepositModalError('')
   }
-  function sendDepositRequest(requestId) {
-    const request = depositRequests.find((item) => item.id === requestId)
-    if (!request) return notify('Không tìm thấy yêu cầu nạp.', 'error')
-    if (!request.billName) { setDepositErrorId(requestId); return notify('Vui lòng bổ sung bill chuyển khoản trước khi gửi yêu cầu nạp.', 'error') }
-    if (['Pending Admin Review', 'Approved', 'Rejected'].includes(request.status)) return notify('Yêu cầu này đã được gửi hoặc đã xử lý.', 'error')
-    const next = depositRequests.map((item) => item.id === requestId ? { ...item, status: 'Pending Admin Review', submittedAt: new Date().toISOString() } : item)
-    setDepositRequests(next); saveStore(DEPOSIT_KEY, next); setDepositErrorId('')
-    notify('Đã gửi yêu cầu nạp cho Admin. Admin sẽ check giao dịch + mã GD rồi duyệt hoặc từ chối.')
+  function sendDepositRequest() {
+    if (!activeDeposit) return
+    if (!activeDeposit.billName) return setDepositModalError('Vui lòng bổ sung bill chuyển khoản trước khi gửi yêu cầu nạp.')
+    const submitted = { ...activeDeposit, status: 'Pending Admin Review', submittedAt: new Date().toISOString() }
+    const next = [submitted, ...depositRequests]
+    setDepositRequests(next); saveStore(DEPOSIT_KEY, next); setActiveDeposit(submitted); setDepositModalError(''); setDepositSentSuccess(true)
+    notify('Đã gửi yêu cầu nạp. Vui lòng đợi Admin xử lý tối đa 15 phút.')
   }
+  function openDepositDetail(request) { setActiveDeposit(request); setDepositModalMode('detail'); setDepositModalError(''); setDepositSentSuccess(false) }
+  function closeDepositModal() { setActiveDeposit(null); setDepositModalError(''); setDepositSentSuccess(false) }
+
   function updateWithdraw(field, value) { setWithdrawForm((prev) => ({ ...prev, [field]: value })) }
   function submitWithdraw(event) {
     event.preventDefault()
@@ -68,13 +122,14 @@ export default function WalletFixed() {
   }
 
   return <div className="space-y-6">
-    <div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">My Wallet / Ví của tôi</p><h1 className="page-title mt-2">Auction Credit wallet</h1><p className="muted mt-3 max-w-3xl">Nạp Credit bằng VietQR, upload bill, sau đó bấm gửi yêu cầu nạp. Admin chỉ nhận yêu cầu sau bước gửi này.</p></div>
+    <DepositModal request={activeDeposit} mode={depositModalMode} error={depositModalError} success={depositSentSuccess} onClose={closeDepositModal} onUploadBill={uploadDepositBill} onSubmit={sendDepositRequest} />
+    <div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">My Wallet / Ví của tôi</p><h1 className="page-title mt-2">Auction Credit wallet</h1><p className="muted mt-3 max-w-3xl">Nạp Credit bằng VietQR trong pop-up. Sau khi gửi, mỗi yêu cầu sẽ lưu thành một dòng gọn để theo dõi trạng thái.</p></div>
     {message ? <div className={`rounded-2xl border p-4 text-sm ${messageType === 'error' ? 'border-rose-400/50 bg-rose-500/15 text-rose-100' : 'border-auction-neon/30 bg-auction-neon/10 text-emerald-100'}`}>{message}</div> : null}
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><StatCard label="Available Credit" value={money(currentUser.wallet.available)} hint="Chỉ số dư này được dùng để rút" /><StatCard label="Pending Credit" value={money(currentUser.wallet.pending)} hint="Không được tính vào số dư rút" accent /><StatCard label="Total Credit" value={money(currentUser.wallet.available + currentUser.wallet.pending)} hint="Available + Pending" /><StatCard label="Current Member" value={currentMemberLevel} hint={`${currentUser.score} score points`} /></section>
-    <section className="grid gap-6 xl:grid-cols-[420px_1fr]"><div className="glass-card p-6"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Top Up / Nạp Credit</p><h2 className="mt-2 text-2xl font-black text-white">Tạo yêu cầu nạp Credit</h2></div><Badge tone="default">Techcom Bank</Badge></div><label className="mt-6 block"><span className="label">Số Credit cần nạp</span><input className="field" type="number" min="1" value={amount} onChange={(e) => setAmount(Number(e.target.value))} /></label><div className="mt-4 rounded-2xl border border-auction-gold/20 bg-auction-gold/10 p-4 text-sm text-slate-200"><p>Quy đổi: <strong className="text-white">{money(amount)}</strong> = <strong className="text-auction-gold">{vnd(Number(amount || 0) * AC_TO_VND)}</strong></p><p className="mt-1 text-xs text-slate-400">Credit chỉ cộng vào ví sau khi Admin duyệt bill.</p></div><button onClick={createDepositRequest} className="btn-primary mt-4 w-full">Tạo thông tin chuyển khoản</button><PolicyBox title="Top Up Approval Policy" type="gold">Waiting Bill / Bill Uploaded chưa gửi tới Admin. Chỉ Pending Admin Review mới vào hàng chờ Admin.</PolicyBox></div>
-      <div className="glass-card p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Deposit Requests</p><h2 className="mt-2 text-2xl font-black text-white">Thông tin chuyển khoản & upload bill</h2></div><Badge>{userDepositRequests.length} requests</Badge></div><div className="space-y-4">{userDepositRequests.length ? userDepositRequests.map((request) => { const locked = ['Pending Admin Review', 'Approved', 'Rejected'].includes(request.status); const missingBillError = depositErrorId === request.id && !request.billName; return <div key={request.id} className={`soft-card p-4 ${missingBillError ? 'border-rose-400/70 shadow-[0_0_0_1px_rgba(251,113,133,0.45)]' : ''}`}><div className="grid gap-4 lg:grid-cols-[1fr_220px]"><div><div className="mb-3 flex flex-wrap gap-2"><Badge tone={request.status === 'Approved' ? 'Approved' : request.status === 'Rejected' ? 'Rejected' : request.status === 'Pending Admin Review' ? 'Pending' : 'default'}>{request.status}</Badge><Badge>{request.transactionCode}</Badge></div><p className="font-black text-white">Nạp {money(request.creditAmount)} · {vnd(request.vndAmount)}</p><div className="mt-3 grid gap-2 text-sm text-slate-300 md:grid-cols-2"><p>Bank: <strong className="text-white">{request.bank}</strong></p><p>STK: <strong className="text-white">{request.bankAccount}</strong></p><p>Chủ TK: <strong className="text-white">{request.accountHolder}</strong></p><p>Mã GD: <strong className="text-auction-gold">{request.transactionCode}</strong></p></div><label className="mt-4 block"><span className={`label ${missingBillError ? '!text-rose-200' : ''}`}>Upload bill chuyển khoản</span><input className={`field ${missingBillError ? '!border-rose-400 !bg-rose-500/10' : ''}`} type="file" accept="image/*" disabled={locked} onChange={(e) => uploadDepositBill(request.id, e.target.files?.[0])} /></label>{missingBillError ? <p className="mt-2 rounded-2xl border border-rose-400/40 bg-rose-500/15 p-3 text-sm font-bold text-rose-100">Vui lòng bổ sung bill chuyển khoản trước khi gửi yêu cầu nạp.</p> : null}{request.billName ? <p className="mt-2 text-sm text-slate-300">Bill: <strong className="text-white">{request.billName}</strong></p> : null}<button className="btn-primary mt-4 w-full" disabled={locked} onClick={() => sendDepositRequest(request.id)}>Gửi yêu cầu nạp</button><p className="mt-2 text-xs text-slate-400">Created {formatDateTime(request.createdAt)}{request.billUploadedAt ? ` · Bill uploaded ${formatDateTime(request.billUploadedAt)}` : ''}{request.submittedAt ? ` · Sent ${formatDateTime(request.submittedAt)}` : ''}</p></div><div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-center"><img src={qrUrl(request)} alt={`VietQR ${request.transactionCode}`} className="mx-auto rounded-2xl bg-white p-2" /><p className="mt-3 text-xs leading-5 text-slate-300">VietQR ngân hàng: Techcom Bank, STK, số tiền và mã GD.</p></div></div></div> }) : <p className="muted">Chưa có yêu cầu nạp nào. Nhập số Credit và bấm tạo thông tin chuyển khoản.</p>}</div></div></section>
+    <section className="grid gap-6 xl:grid-cols-[420px_1fr]"><div className="glass-card p-6"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Top Up / Nạp Credit</p><h2 className="mt-2 text-2xl font-black text-white">Tạo yêu cầu nạp Credit</h2></div><Badge tone="default">Techcom Bank</Badge></div><label className="mt-6 block"><span className="label">Số Credit cần nạp</span><input className="field" type="number" min="1" value={amount} onChange={(e) => setAmount(Number(e.target.value))} /></label><div className="mt-4 rounded-2xl border border-auction-gold/20 bg-auction-gold/10 p-4 text-sm text-slate-200"><p>Quy đổi: <strong className="text-white">{money(amount)}</strong> = <strong className="text-auction-gold">{vnd(Number(amount || 0) * AC_TO_VND)}</strong></p><p className="mt-1 text-xs text-slate-400">Bấm tạo để mở pop-up VietQR và upload bill.</p></div><button onClick={createDepositRequest} className="btn-primary mt-4 w-full">Tạo thông tin chuyển khoản</button><PolicyBox title="Top Up Approval Policy" type="gold">Yêu cầu chỉ gửi tới Admin sau khi upload bill và bấm Gửi yêu cầu nạp trong pop-up.</PolicyBox></div>
+      <div className="glass-card p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Deposit Requests</p><h2 className="mt-2 text-2xl font-black text-white">Lịch sử yêu cầu nạp</h2><p className="muted mt-2">Bấm vào từng dòng để xem đầy đủ thông tin, QR, bill và trạng thái.</p></div><Badge>{userDepositRequests.length} requests</Badge></div><div className="space-y-3">{userDepositRequests.length ? userDepositRequests.map((request) => <button key={request.id} onClick={() => openDepositDetail(request)} className="soft-card block w-full p-4 text-left transition hover:-translate-y-0.5 hover:border-auction-gold/50"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><Badge tone={statusTone(request.status)}>{request.status}</Badge><Badge>{request.transactionCode}</Badge></div><p className="mt-2 font-black text-white">{money(request.creditAmount)} / {vnd(request.vndAmount)}</p><p className="mt-1 text-xs text-slate-400">Sent {request.submittedAt ? formatDateTime(request.submittedAt) : formatDateTime(request.createdAt)}</p></div><span className="text-2xl text-auction-gold">›</span></div></button>) : <p className="muted">Chưa có yêu cầu đã gửi. Bấm tạo thông tin chuyển khoản để bắt đầu.</p>}</div></div></section>
     <section className="glass-card p-6"><form onSubmit={submitWithdraw}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Withdraw</p><h2 className="mt-2 text-2xl font-black text-white">Rút Credit → VNĐ</h2><p className="muted mt-2">Chỉ được rút từ Available Credit. Pending Credit không được tính.</p></div><Badge tone="default">1 AC = {AC_TO_VND.toLocaleString('vi-VN')} VNĐ</Badge></div><div className="mt-5 grid gap-4 md:grid-cols-2"><label><span className="label">Credit muốn rút</span><input className="field" type="number" min="1" max={currentUser.wallet.available} value={withdrawForm.amount} onChange={(e) => updateWithdraw('amount', Number(e.target.value))} /></label><label><span className="label">Tạm tính VNĐ</span><input className="field" readOnly value={vnd(Number(withdrawForm.amount || 0) * AC_TO_VND)} /></label><label><span className="label">Ngân hàng</span><input className="field" value={withdrawForm.bankName} onChange={(e) => updateWithdraw('bankName', e.target.value)} /></label><label><span className="label">Số tài khoản</span><input className="field" value={withdrawForm.bankAccount} onChange={(e) => updateWithdraw('bankAccount', e.target.value)} /></label><label className="md:col-span-2"><span className="label">Tên chủ tài khoản</span><input className="field" value={withdrawForm.accountName} onChange={(e) => updateWithdraw('accountName', e.target.value)} /></label><label className="md:col-span-2"><span className="label">Ghi chú</span><textarea className="field min-h-24" value={withdrawForm.note} onChange={(e) => updateWithdraw('note', e.target.value)} /></label></div><button className="btn-primary mt-5 w-full" type="submit">Send Withdrawal Request</button></form></section>
-    <section className="glass-card p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Withdrawal Requests</p><h2 className="mt-2 text-2xl font-black text-white">Lịch sử yêu cầu rút</h2></div><Badge>{userWithdrawRequests.length} requests</Badge></div><div className="space-y-3">{userWithdrawRequests.length ? userWithdrawRequests.map((request) => <div key={request.id} className="soft-card p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-black text-white">{money(request.amount)} → {vnd(request.vndAmount)}</p><p className="mt-1 text-sm text-slate-300">{request.bankName} · {request.bankAccount} · {request.accountName}</p><p className="mt-1 text-xs text-slate-400">Created {formatDateTime(request.createdAt)}{request.reviewedAt ? ` · Reviewed ${formatDateTime(request.reviewedAt)}` : ''}</p></div><Badge tone={request.status === 'Approved' ? 'Approved' : request.status === 'Rejected' ? 'Rejected' : 'Pending'}>{request.status}</Badge></div>{request.reviewNote ? <p className="mt-3 rounded-2xl bg-black/30 p-3 text-sm text-slate-300">Admin note: {request.reviewNote}</p> : null}</div>) : <p className="muted">Chưa có yêu cầu rút nào.</p>}</div></section>
-    <section className="grid gap-6 xl:grid-cols-2"><div className="glass-card p-6"><h2 className="text-2xl font-black text-white">Current Active Bids</h2><div className="mt-5 space-y-3">{activeBids.length ? activeBids.map((bid) => <div key={bid.id} className="soft-card p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><a href={`#/room/${bid.roomId}`} className="font-black text-white hover:text-auction-gold">{bid.roomTitle}</a><p className="mt-1 text-sm text-slate-400">Bid {money(bid.amount)} · Pending {money(bid.pendingAmount)}</p></div><Badge tone={bid.status === 'active' ? 'Live' : bid.status === 'paid' ? 'Paid' : 'Rejected'}>{bid.status}</Badge></div></div>) : <p className="muted">No current active bids.</p>}</div></div><div className="glass-card p-6"><h2 className="text-2xl font-black text-white">Bid Win History</h2><div className="mt-5 space-y-3">{(currentUser.winHistory || []).length ? currentUser.winHistory.map((win) => <div key={win.id} className="soft-card p-4"><p className="font-black text-white">{win.roomTitle}</p><p className="mt-1 text-sm text-slate-400">Paid {money(win.amount)} · {formatDateTime(win.paidAt)}</p></div>) : <p className="muted">No win history yet.</p>}</div></div></section>
+    <section className="glass-card p-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Withdrawal Requests</p><h2 className="mt-2 text-2xl font-black text-white">Lịch sử yêu cầu rút</h2></div><Badge>{userWithdrawRequests.length} requests</Badge></div><div className="space-y-3">{userWithdrawRequests.length ? userWithdrawRequests.map((request) => <div key={request.id} className="soft-card p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-black text-white">{money(request.amount)} → {vnd(request.vndAmount)}</p><p className="mt-1 text-sm text-slate-300">{request.bankName} · {request.bankAccount} · {request.accountName}</p><p className="mt-1 text-xs text-slate-400">Created {formatDateTime(request.createdAt)}{request.reviewedAt ? ` · Reviewed ${formatDateTime(request.reviewedAt)}` : ''}</p></div><Badge tone={statusTone(request.status)}>{request.status}</Badge></div>{request.reviewNote ? <p className="mt-3 rounded-2xl bg-black/30 p-3 text-sm text-slate-300">Admin note: {request.reviewNote}</p> : null}</div>) : <p className="muted">Chưa có yêu cầu rút nào.</p>}</div></section>
+    <section className="grid gap-6 xl:grid-cols-2"><div className="glass-card p-6"><h2 className="text-2xl font-black text-white">Current Active Bids</h2><div className="mt-5 space-y-3">{activeBids.length ? activeBids.map((bid) => <div key={bid.id} className="soft-card p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><a href={`#/room/${bid.roomId}`} className="font-black text-white hover:text-auction-gold">{bid.roomTitle}</a><p className="mt-1 text-sm text-slate-400">Bid {money(bid.amount)} · Pending {money(bid.pendingAmount)}</p></div><Badge tone={statusTone(bid.status)}>{bid.status}</Badge></div></div>) : <p className="muted">No current active bids.</p>}</div></div><div className="glass-card p-6"><h2 className="text-2xl font-black text-white">Bid Win History</h2><div className="mt-5 space-y-3">{(currentUser.winHistory || []).length ? currentUser.winHistory.map((win) => <div key={win.id} className="soft-card p-4"><p className="font-black text-white">{win.roomTitle}</p><p className="mt-1 text-sm text-slate-400">Paid {money(win.amount)} · {formatDateTime(win.paidAt)}</p></div>) : <p className="muted">No win history yet.</p>}</div></div></section>
   </div>
 }
