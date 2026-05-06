@@ -1,11 +1,18 @@
+import { useEffect, useState } from 'react'
 import Badge from './Badge'
 import { canJoinRoom, formatDateTime, getPendingPolicyText, money, timeLeft } from '../utils/policies'
 import { useAuction } from '../context/AuctionContext'
 
 export default function RoomCard({ room, compact = false }) {
   const { currentUser, currentMemberLevel, followedRooms, toggleFollowRoom } = useAuction()
+  const [, setTick] = useState(0)
   const followed = followedRooms.some((item) => item.id === room.id)
   const eligibility = canJoinRoom(currentUser, room)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((value) => value + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   return (
     <article className="glass-card overflow-hidden hover:-translate-y-1">
