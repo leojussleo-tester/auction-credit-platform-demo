@@ -19,13 +19,13 @@ function tierLabel(user, currentMemberLevel) {
 
 const copy = {
   vi: {
-    product: 'Luxury Fintech Marketplace', home: 'Trang chủ', bid: 'Bid Lobby', wallet: 'Ví của tôi', info: 'Thông tin', seller: 'Seller Mode', admin: 'Admin System', logout: 'Đăng xuất', profile: 'Hồ sơ', available: 'Khả dụng', pending: 'Pending', reset: 'Reset Demo Data', core: 'Luật chính',
-    adminNote: 'Staff có đủ Bid Lobby, My Wallet, My Info và Admin System để kiểm tra flow như member/seller.',
+    product: 'Luxury Fintech Marketplace', home: 'Trang chủ', bid: 'Bid Lobby', wallet: 'Ví của tôi', info: 'Thông tin', seller: 'Seller Mode', admin: 'Admin System', adminHistory: 'Lịch sử duyệt', logout: 'Đăng xuất', profile: 'Hồ sơ', available: 'Khả dụng', pending: 'Pending', reset: 'Reset Demo Data', core: 'Luật chính',
+    adminNote: 'Staff có đủ Bid Lobby, My Wallet, My Info, Admin System và Lịch sử duyệt để kiểm tra flow.',
     coreText: 'Auction Credit là credit nội bộ prototype: dùng để pending khi bid, refund khi outbid, giữ khi thắng và xử lý paid/failed qua Admin.',
   },
   en: {
-    product: 'Luxury Fintech Marketplace', home: 'Home', bid: 'Bid Lobby', wallet: 'My Wallet', info: 'My Info', seller: 'Seller Mode', admin: 'Admin System', logout: 'Logout', profile: 'Profile', available: 'Available', pending: 'Pending', reset: 'Reset Demo Data', core: 'Core Rule',
-    adminNote: 'Staff can access Bid Lobby, My Wallet, My Info and Admin System to test the full member/seller flow.',
+    product: 'Luxury Fintech Marketplace', home: 'Home', bid: 'Bid Lobby', wallet: 'My Wallet', info: 'My Info', seller: 'Seller Mode', admin: 'Admin System', adminHistory: 'Review History', logout: 'Logout', profile: 'Profile', available: 'Available', pending: 'Pending', reset: 'Reset Demo Data', core: 'Core Rule',
+    adminNote: 'Staff can access Bid Lobby, My Wallet, My Info, Admin System and Review History to test the full flow.',
     coreText: 'Auction Credit is an internal prototype credit used for bid pending, outbid refunds, winner hold and admin paid/failed handling.',
   },
 }
@@ -41,7 +41,7 @@ export default function Layout({ children, route, onLogout }) {
     { label: t.wallet, href: '#/wallet' },
     { label: t.info, href: '#/account' },
     ...(role === 'seller' ? [{ label: t.seller, href: '#/seller' }] : []),
-    ...(role === 'admin' ? [{ label: t.admin, href: '#/admin' }] : []),
+    ...(role === 'admin' ? [{ label: t.admin, href: '#/admin' }, { label: t.adminHistory, href: '#/admin-history' }] : []),
   ]
 
   function switchLang(nextLang) {
