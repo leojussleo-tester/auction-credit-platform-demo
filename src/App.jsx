@@ -10,6 +10,7 @@ import BidPage from './pages/BidPage'
 import BidRoom from './pages/BidRoom'
 import SellerDashboard from './pages/SellerDashboard'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminFinanceHistory from './pages/AdminFinanceHistory'
 
 const AUTH_KEY = 'auction_platform_login_v2_user_id'
 
@@ -41,6 +42,7 @@ function Router({ onLogout }) {
   if (roomMatch) page = <BidRoom roomId={roomMatch[1]} />
   if (route === '/seller') page = role === 'seller' ? <SellerDashboard /> : <Home />
   if (route === '/admin') page = role === 'admin' ? <AdminDashboard /> : <Home />
+  if (route === '/admin-history') page = role === 'admin' ? <AdminFinanceHistory /> : <Home />
 
   return <Layout route={route} onLogout={onLogout}>{page}</Layout>
 }
