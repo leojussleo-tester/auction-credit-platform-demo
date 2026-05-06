@@ -10,6 +10,7 @@ const DEPOSIT_KEY = 'auction-credit-deposit-requests-v1'
 const AC_TO_VND = 1000
 const BANK_INFO = {
   bank: 'Techcom Bank',
+  bankCode: '970407',
   account: '797979292929',
   holder: 'LE HONG PHUC',
 }
@@ -27,8 +28,12 @@ function txCode() {
   return `${a}${b}${nums}`
 }
 function qrUrl(request) {
-  const text = `BANK:${request.bank}\nSTK:${request.bankAccount}\nNAME:${request.accountHolder}\nAMOUNT:${request.vndAmount}\nCONTENT:${request.transactionCode}`
-  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(text)}`
+  const bankCode = request.bankCode || BANK_INFO.bankCode
+  const account = request.bankAccount || BANK_INFO.account
+  const amount = Number(request.vndAmount || 0)
+  const addInfo = request.transactionCode || ''
+  const accountName = request.accountHolder || BANK_INFO.holder
+  return `https://img.vietqr.io/image/${bankCode}-${account}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}&accountName=${encodeURIComponent(accountName)}`
 }
 
 export default function Wallet() {
@@ -62,6 +67,7 @@ export default function Wallet() {
       creditAmount,
       vndAmount: creditAmount * AC_TO_VND,
       bank: BANK_INFO.bank,
+      bankCode: BANK_INFO.bankCode,
       bankAccount: BANK_INFO.account,
       accountHolder: BANK_INFO.holder,
       transactionCode: txCode(),
@@ -77,7 +83,7 @@ export default function Wallet() {
     const next = [request, ...depositRequests]
     setDepositRequests(next)
     saveStore(DEPOSIT_KEY, next)
-    setMessage('Đã tạo thông tin chuyển khoản. Upload bill rồi bấm “Gửi yêu cầu nạp” để Admin nhận yêu cầu.')
+    setMessage('Đã tạo VietQR ngân hàng. Upload bill rồi bấm “Gửi yêu cầu nạp” để Admin nhận yêu cầu.')
   }
 
   function uploadDepositBill(requestId, file) {
@@ -159,7 +165,7 @@ export default function Wallet() {
       <div>
         <p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">My Wallet / Ví của tôi</p>
         <h1 className="page-title mt-2">Auction Credit wallet</h1>
-        <p className="muted mt-3 max-w-3xl">Nạp Credit bằng chuyển khoản mock, upload bill, bấm gửi yêu cầu nạp để Admin kiểm tra mã GD. Credit chỉ cộng sau khi Admin duyệt.</p>
+        <p className="muted mt-3 max-w-3xl">Nạp Credit bằng VietQR mock, upload bill, bấm gửi yêu cầu nạp để Admin kiểm tra mã GD. Credit chỉ cộng sau khi Admin duyệt.</p>
       </div>
 
       {message ? <div className="rounded-2xl border border-auction-neon/30 bg-auction-neon/10 p-4 text-sm text-emerald-100">{message}</div> : null}
@@ -189,7 +195,7 @@ export default function Wallet() {
             <p className="mt-1 text-xs text-slate-400">Credit chỉ cộng vào ví sau khi Admin duyệt bill.</p>
           </div>
           <button onClick={createDepositRequest} className="btn-primary mt-4 w-full">Tạo thông tin chuyển khoản</button>
-          <PolicyBox title="Top Up Approval Policy" type="gold">Bước 1 tạo thông tin chuyển khoản. Bước 2 upload bill. Bước 3 bấm “Gửi yêu cầu nạp” để Admin nhận thông báo duyệt.</PolicyBox>
+          <PolicyBox title="Top Up Approval Policy" type="gold">Bước 1 tạo VietQR ngân hàng. Bước 2 upload bill. Bước 3 bấm “Gửi yêu cầu nạp” để Admin nhận thông báo duyệt.</PolicyBox>
         </div>
 
         <div className="glass-card p-6">
@@ -222,8 +228,8 @@ export default function Wallet() {
                     <p className="mt-2 text-xs text-slate-400">Created {formatDateTime(request.createdAt)}{request.billUploadedAt ? ` · Bill uploaded ${formatDateTime(request.billUploadedAt)}` : ''}{request.submittedAt ? ` · Sent ${formatDateTime(request.submittedAt)}` : ''}</p>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-center">
-                    <img src={qrUrl(request)} alt={`QR ${request.transactionCode}`} className="mx-auto rounded-2xl bg-white p-2" />
-                    <p className="mt-3 text-xs leading-5 text-slate-300">QR chứa Bank, STK, số tiền và mã GD.</p>
+                    <img src={qrUrl(request)} alt={`VietQR ${request.transactionCode}`} className="mx-auto rounded-2xl bg-white p-2" />
+                    <p className="mt-3 text-xs leading-5 text-slate-300">VietQR ngân hàng: Techcom Bank, STK, số tiền và mã GD.</p>
                   </div>
                 </div>
               </div>
