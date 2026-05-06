@@ -69,6 +69,7 @@ export default function Wallet() {
       billName: '',
       billNote: '',
       createdAt: new Date().toISOString(),
+      billUploadedAt: null,
       submittedAt: null,
       reviewedAt: null,
       reviewNote: '',
@@ -76,19 +77,35 @@ export default function Wallet() {
     const next = [request, ...depositRequests]
     setDepositRequests(next)
     saveStore(DEPOSIT_KEY, next)
-    setMessage('Đã tạo thông tin chuyển khoản. Vui lòng chuyển khoản đúng mã GD và upload bill.')
+    setMessage('Đã tạo thông tin chuyển khoản. Upload bill rồi bấm “Gửi yêu cầu nạp” để Admin nhận yêu cầu.')
   }
 
-  function submitDepositBill(requestId, file) {
+  function uploadDepositBill(requestId, file) {
+    if (!file) return
     const next = depositRequests.map((request) => request.id === requestId ? {
       ...request,
-      status: 'Pending Admin Review',
-      billName: file?.name || `bill-${request.transactionCode}.png`,
-      submittedAt: new Date().toISOString(),
+      status: request.status === 'Pending Admin Review' ? request.status : 'Bill Uploaded',
+      billName: file.name || `bill-${request.transactionCode}.png`,
+      billUploadedAt: new Date().toISOString(),
     } : request)
     setDepositRequests(next)
     saveStore(DEPOSIT_KEY, next)
-    setMessage('Đã gửi bill lên hệ thống. Admin sẽ kiểm tra giao dịch và mã GD.')
+    setMessage('Đã nhận bill. Bấm “Gửi yêu cầu nạp” để chuyển yêu cầu sang Admin.')
+  }
+
+  function sendDepositRequest(requestId) {
+    const request = depositRequests.find((item) => item.id === requestId)
+    if (!request) return setMessage('Không tìm thấy yêu cầu nạp.')
+    if (!request.billName) return setMessage('Vui lòng upload bill chuyển khoản trước khi gửi yêu cầu nạp.')
+    if (request.status === 'Approved' || request.status === 'Rejected') return setMessage('Yêu cầu này đã được xử lý.')
+    const next = depositRequests.map((item) => item.id === requestId ? {
+      ...item,
+      status: 'Pending Admin Review',
+      submittedAt: new Date().toISOString(),
+    } : item)
+    setDepositRequests(next)
+    saveStore(DEPOSIT_KEY, next)
+    setMessage('Đã gửi yêu cầu nạp cho Admin. Admin sẽ check giao dịch + mã GD rồi duyệt hoặc từ chối.')
   }
 
   function updateWithdraw(field, value) {
@@ -142,7 +159,7 @@ export default function Wallet() {
       <div>
         <p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">My Wallet / Ví của tôi</p>
         <h1 className="page-title mt-2">Auction Credit wallet</h1>
-        <p className="muted mt-3 max-w-3xl">Nạp Credit bằng chuyển khoản mock, upload bill để Admin kiểm tra mã GD, duyệt thì Credit mới chảy vào tài khoản.</p>
+        <p className="muted mt-3 max-w-3xl">Nạp Credit bằng chuyển khoản mock, upload bill, bấm gửi yêu cầu nạp để Admin kiểm tra mã GD. Credit chỉ cộng sau khi Admin duyệt.</p>
       </div>
 
       {message ? <div className="rounded-2xl border border-auction-neon/30 bg-auction-neon/10 p-4 text-sm text-emerald-100">{message}</div> : null}
@@ -172,7 +189,7 @@ export default function Wallet() {
             <p className="mt-1 text-xs text-slate-400">Credit chỉ cộng vào ví sau khi Admin duyệt bill.</p>
           </div>
           <button onClick={createDepositRequest} className="btn-primary mt-4 w-full">Tạo thông tin chuyển khoản</button>
-          <PolicyBox title="Top Up Approval Policy" type="gold">Mem/Seller chuyển khoản đúng Bank, STK và Mã GD. Sau đó upload bill. Admin check giao dịch + mã GD rồi duyệt hoặc từ chối.</PolicyBox>
+          <PolicyBox title="Top Up Approval Policy" type="gold">Bước 1 tạo thông tin chuyển khoản. Bước 2 upload bill. Bước 3 bấm “Gửi yêu cầu nạp” để Admin nhận thông báo duyệt.</PolicyBox>
         </div>
 
         <div className="glass-card p-6">
@@ -188,7 +205,7 @@ export default function Wallet() {
               <div key={request.id} className="soft-card p-4">
                 <div className="grid gap-4 lg:grid-cols-[1fr_220px]">
                   <div>
-                    <div className="mb-3 flex flex-wrap gap-2"><Badge tone={request.status === 'Approved' ? 'Approved' : request.status === 'Rejected' ? 'Rejected' : 'Pending'}>{request.status}</Badge><Badge>{request.transactionCode}</Badge></div>
+                    <div className="mb-3 flex flex-wrap gap-2"><Badge tone={request.status === 'Approved' ? 'Approved' : request.status === 'Rejected' ? 'Rejected' : request.status === 'Pending Admin Review' ? 'Pending' : 'default'}>{request.status}</Badge><Badge>{request.transactionCode}</Badge></div>
                     <p className="font-black text-white">Nạp {money(request.creditAmount)} · {vnd(request.vndAmount)}</p>
                     <div className="mt-3 grid gap-2 text-sm text-slate-300 md:grid-cols-2">
                       <p>Bank: <strong className="text-white">{request.bank}</strong></p>
@@ -198,10 +215,11 @@ export default function Wallet() {
                     </div>
                     <label className="mt-4 block">
                       <span className="label">Upload bill chuyển khoản</span>
-                      <input className="field" type="file" accept="image/*" disabled={request.status === 'Approved' || request.status === 'Rejected'} onChange={(e) => submitDepositBill(request.id, e.target.files?.[0])} />
+                      <input className="field" type="file" accept="image/*" disabled={request.status === 'Approved' || request.status === 'Rejected' || request.status === 'Pending Admin Review'} onChange={(e) => uploadDepositBill(request.id, e.target.files?.[0])} />
                     </label>
                     {request.billName ? <p className="mt-2 text-sm text-slate-300">Bill: <strong className="text-white">{request.billName}</strong></p> : null}
-                    <p className="mt-2 text-xs text-slate-400">Created {formatDateTime(request.createdAt)}{request.submittedAt ? ` · Bill sent ${formatDateTime(request.submittedAt)}` : ''}</p>
+                    <button className="btn-primary mt-4 w-full" disabled={!request.billName || request.status === 'Pending Admin Review' || request.status === 'Approved' || request.status === 'Rejected'} onClick={() => sendDepositRequest(request.id)}>Gửi yêu cầu nạp</button>
+                    <p className="mt-2 text-xs text-slate-400">Created {formatDateTime(request.createdAt)}{request.billUploadedAt ? ` · Bill uploaded ${formatDateTime(request.billUploadedAt)}` : ''}{request.submittedAt ? ` · Sent ${formatDateTime(request.submittedAt)}` : ''}</p>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-center">
                     <img src={qrUrl(request)} alt={`QR ${request.transactionCode}`} className="mx-auto rounded-2xl bg-white p-2" />
