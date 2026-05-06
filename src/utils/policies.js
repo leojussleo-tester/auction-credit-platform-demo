@@ -21,7 +21,13 @@ export function formatDateTime(value) {
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
   }).format(new Date(value))
+}
+
+function pad(value) {
+  return String(value).padStart(2, '0')
 }
 
 export function timeLeft(endTime, status) {
@@ -29,11 +35,14 @@ export function timeLeft(endTime, status) {
   if (status === 'Paused') return 'Paused by Admin'
   if (status === 'Locked') return 'Locked by Admin'
   const diff = new Date(endTime).getTime() - Date.now()
-  if (diff <= 0) return 'Closing soon'
-  const hours = Math.floor(diff / 1000 / 60 / 60)
-  const minutes = Math.floor((diff / 1000 / 60) % 60)
-  if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`
-  return `${hours}h ${minutes}m`
+  if (diff <= 0) return '00:00:00'
+  const totalSeconds = Math.floor(diff / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  const clock = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  return days > 0 ? `${days}d ${clock}` : clock
 }
 
 export function calculateMemberLevel(user) {
