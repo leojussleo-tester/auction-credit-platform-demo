@@ -6,6 +6,7 @@ import { formatDateTime, money } from '../utils/policies'
 
 const SELLER_ROOM_REQUESTS_KEY = 'auction-credit-seller-room-requests-v1'
 const ROOM_GALLERIES_KEY = 'auction-credit-room-galleries-v1'
+const DEPOSIT_KEY = 'auction-credit-deposit-requests-v1'
 
 function loadRequests() {
   try { return JSON.parse(localStorage.getItem(SELLER_ROOM_REQUESTS_KEY) || '[]') } catch { return [] }
@@ -13,6 +14,9 @@ function loadRequests() {
 function saveRequests(value) { localStorage.setItem(SELLER_ROOM_REQUESTS_KEY, JSON.stringify(value)) }
 function loadGalleries() {
   try { return JSON.parse(localStorage.getItem(ROOM_GALLERIES_KEY) || '{}') } catch { return {} }
+}
+function loadDeposits() {
+  try { return JSON.parse(localStorage.getItem(DEPOSIT_KEY) || '[]') } catch { return [] }
 }
 function saveGallery(title, productName, images = []) {
   const galleries = loadGalleries()
@@ -25,12 +29,15 @@ function localToIso(value) {
   const date = value ? new Date(value) : new Date()
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
 }
+function vnd(value) { return `${Number(value || 0).toLocaleString('vi-VN')} VNĐ` }
 
 export default function AdminDashboardV2() {
   const { adminCreateRoom } = useAuction()
   const [requests, setRequests] = useState(loadRequests)
+  const [depositPreview] = useState(loadDeposits)
   const [message, setMessage] = useState('')
   const pendingRequests = requests.filter((item) => item.status === 'Pending Admin Review')
+  const pendingDepositsWithBill = depositPreview.filter((item) => item.status === 'Pending Admin Review')
 
   function updateRequest(id, patch) {
     const next = requests.map((item) => item.id === id ? { ...item, ...patch } : item)
@@ -111,6 +118,22 @@ export default function AdminDashboardV2() {
         </div>) : <p className="muted">Không có yêu cầu tạo phòng từ seller đang chờ.</p>}
       </div>
     </section>
+
+    <section className="glass-card p-6">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Deposit Bill Preview</p><h2 className="mt-2 text-2xl font-black text-white">Ảnh bill nạp Credit đang chờ</h2><p className="muted mt-2">Bill mới sau bản cập nhật sẽ hiện ảnh để Admin đối soát trước khi duyệt.</p></div>
+        <Badge>{pendingDepositsWithBill.length} pending bills</Badge>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {pendingDepositsWithBill.length ? pendingDepositsWithBill.map((request) => <div key={request.id} className="soft-card p-4">
+          <div className="flex flex-wrap gap-2"><Badge tone="Pending">{request.status}</Badge><Badge>{request.transactionCode}</Badge></div>
+          <p className="mt-3 font-black text-white">{request.userName} · {money(request.creditAmount)} / {vnd(request.vndAmount)}</p>
+          <p className="mt-1 text-sm text-slate-300">Bill: <strong className="text-white">{request.billName || 'Không có tên file'}</strong></p>
+          {request.billDataUrl ? <a href={request.billDataUrl} target="_blank" rel="noreferrer"><img src={request.billDataUrl} alt={request.billName || 'Bill chuyển khoản'} className="mt-3 max-h-72 w-full rounded-3xl object-contain bg-black/30" /></a> : <div className="mt-3 rounded-3xl border border-rose-400/40 bg-rose-500/10 p-4 text-sm text-rose-100">Request này chưa có preview ảnh. Tạo yêu cầu nạp mới sau bản cập nhật để Admin xem được bill.</div>}
+        </div>) : <p className="muted">Không có bill nạp đang chờ.</p>}
+      </div>
+    </section>
+
     <section className="glass-card p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Platform Exclusive</p><h2 className="mt-2 text-2xl font-black text-white">Tạo room độc quyền của sàn</h2></div>
