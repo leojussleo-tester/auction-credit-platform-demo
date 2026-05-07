@@ -8,7 +8,7 @@ import AccountKYC from './pages/AccountKYC'
 import Wallet from './pages/WalletClean'
 import BidPage from './pages/BidPage'
 import BidRoom from './pages/BidRoom'
-import SellerDashboard from './pages/SellerDashboard'
+import SellerDashboard from './pages/SellerDashboardV2'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminFinanceHistory from './pages/AdminFinanceHistory'
 
@@ -51,41 +51,15 @@ function AuthGate() {
   const { state, setCurrentUser } = useAuction()
   const [selectedUserId, setSelectedUserId] = useState('')
   const [loading, setLoading] = useState(false)
-
   const loginUsers = useMemo(() => state.users, [state.users])
-
-  useEffect(() => {
-    localStorage.removeItem(AUTH_KEY)
-    if (!selectedUserId) return
-    setCurrentUser(selectedUserId)
-  }, [selectedUserId, setCurrentUser])
-
-  function handleLogin(userId) {
-    setLoading(true)
-    setTimeout(() => {
-      setCurrentUser(userId)
-      setSelectedUserId(userId)
-      setLoading(false)
-      window.location.hash = '#/'
-    }, 800)
-  }
-
-  function handleLogout() {
-    localStorage.removeItem(AUTH_KEY)
-    setSelectedUserId('')
-    window.location.hash = '#/'
-  }
-
+  useEffect(() => { localStorage.removeItem(AUTH_KEY); if (selectedUserId) setCurrentUser(selectedUserId) }, [selectedUserId, setCurrentUser])
+  function handleLogin(userId) { setLoading(true); setTimeout(() => { setCurrentUser(userId); setSelectedUserId(userId); setLoading(false); window.location.hash = '#/' }, 800) }
+  function handleLogout() { localStorage.removeItem(AUTH_KEY); setSelectedUserId(''); window.location.hash = '#/' }
   if (loading) return <LoadingScreen />
   if (!selectedUserId) return <LoginPage users={loginUsers} onLogin={handleLogin} />
-
   return <Router onLogout={handleLogout} />
 }
 
 export default function App() {
-  return (
-    <AuctionProvider>
-      <AuthGate />
-    </AuctionProvider>
-  )
+  return <AuctionProvider><AuthGate /></AuctionProvider>
 }
