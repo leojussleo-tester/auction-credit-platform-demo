@@ -9,7 +9,7 @@ import Wallet from './pages/WalletClean'
 import BidPage from './pages/BidPage'
 import BidRoom from './pages/BidRoom'
 import SellerDashboard from './pages/SellerDashboardV2'
-import AdminDashboard from './pages/AdminDashboard'
+import AdminDashboard from './pages/AdminDashboardV2'
 import AdminFinanceHistory from './pages/AdminFinanceHistory'
 
 const AUTH_KEY = 'auction_platform_login_v2_user_id'
@@ -34,7 +34,6 @@ function Router({ onLogout }) {
   const roomMatch = route.match(/^\/room\/(.+)$/)
   const { currentUser } = useAuction()
   const role = currentUser?.role
-
   let page = <Home />
   if (route === '/account') page = <AccountKYC />
   if (route === '/wallet') page = <Wallet />
@@ -43,7 +42,6 @@ function Router({ onLogout }) {
   if (route === '/seller') page = role === 'seller' ? <SellerDashboard /> : <Home />
   if (route === '/admin') page = role === 'admin' ? <AdminDashboard /> : <Home />
   if (route === '/admin-history') page = role === 'admin' ? <AdminFinanceHistory /> : <Home />
-
   return <Layout route={route} onLogout={onLogout}>{page}</Layout>
 }
 
