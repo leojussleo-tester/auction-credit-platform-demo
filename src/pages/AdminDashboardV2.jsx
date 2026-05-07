@@ -5,11 +5,22 @@ import { useAuction } from '../context/AuctionContext'
 import { formatDateTime, money } from '../utils/policies'
 
 const SELLER_ROOM_REQUESTS_KEY = 'auction-credit-seller-room-requests-v1'
+const ROOM_GALLERIES_KEY = 'auction-credit-room-galleries-v1'
 
 function loadRequests() {
   try { return JSON.parse(localStorage.getItem(SELLER_ROOM_REQUESTS_KEY) || '[]') } catch { return [] }
 }
 function saveRequests(value) { localStorage.setItem(SELLER_ROOM_REQUESTS_KEY, JSON.stringify(value)) }
+function loadGalleries() {
+  try { return JSON.parse(localStorage.getItem(ROOM_GALLERIES_KEY) || '{}') } catch { return {} }
+}
+function saveGallery(title, productName, images = []) {
+  const galleries = loadGalleries()
+  const safe = images.slice(0, 5)
+  if (title) galleries[title] = safe
+  if (productName) galleries[productName] = safe
+  localStorage.setItem(ROOM_GALLERIES_KEY, JSON.stringify(galleries))
+}
 function localToIso(value) {
   const date = value ? new Date(value) : new Date()
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
@@ -28,15 +39,17 @@ export default function AdminDashboardV2() {
   }
 
   function approveRequest(request) {
+    const roomTitle = request.title || request.productName
     const startTime = localToIso(request.desiredStartTime)
     const endTime = new Date(new Date(startTime).getTime() + Number(request.durationMinutes || 60) * 60 * 1000).toISOString()
+    saveGallery(roomTitle, request.productName, request.images || [])
     adminCreateRoom({
       sellerId: request.sellerId,
       productId: '',
-      title: request.title || request.productName,
+      title: roomTitle,
       productName: request.productName,
       image: request.primaryImage,
-      description: `${request.description || ''}\n\nProduction: ${request.productionInfo || 'N/A'}\nIncluded: ${request.includedItems || 'N/A'}`,
+      description: `${request.description || ''}\n\nThông tin sản xuất: ${request.productionInfo || 'N/A'}\nSản phẩm kèm theo: ${request.includedItems || 'N/A'}`,
       condition: request.condition,
       roomLevel: request.roomLevel,
       status: new Date(startTime).getTime() <= Date.now() ? 'Live' : 'Upcoming',
@@ -46,10 +59,9 @@ export default function AdminDashboardV2() {
       endTime,
       hasPassword: request.hasPassword,
       roomPassword: request.roomPassword,
-      productImages: request.images,
     })
     updateRequest(request.id, { status: 'Approved', reviewedAt: new Date().toISOString(), reviewNote: 'Admin approved and created auction room.' })
-    setMessage(`Đã duyệt yêu cầu và tạo room: ${request.title || request.productName}`)
+    setMessage(`Đã duyệt yêu cầu và tạo room: ${roomTitle}`)
   }
 
   function rejectRequest(request) {
@@ -81,6 +93,7 @@ export default function AdminDashboardV2() {
                 <p>Bước giá: <strong className="text-white">{money(request.minIncrement)}</strong></p>
                 <p>Thời lượng: <strong className="text-white">{request.durationMinutes} phút</strong></p>
                 <p>Mở dự kiến: <strong className="text-white">{request.desiredStartTime || 'N/A'}</strong></p>
+                <p className="sm:col-span-2">Thông tin sản xuất: <strong className="text-white">{request.productionInfo || 'N/A'}</strong></p>
                 <p className="sm:col-span-2">Tình trạng: <strong className="text-white">{request.condition}</strong></p>
                 <p className="sm:col-span-2">Kèm theo: <strong className="text-white">{request.includedItems || 'Không có'}</strong></p>
               </div>
@@ -103,7 +116,7 @@ export default function AdminDashboardV2() {
         <div><p className="text-xs font-black uppercase tracking-[0.24em] text-auction-gold">Platform Exclusive</p><h2 className="mt-2 text-2xl font-black text-white">Tạo room độc quyền của sàn</h2></div>
         <Badge tone="default">Admin-only</Badge>
       </div>
-      <p className="muted">Form tạo room hiện tại bên dưới dùng cho sản phẩm độc quyền của sàn. Seller không dùng form này nữa.</p>
+      <p className="muted">Form tạo room bên dưới dùng cho sản phẩm độc quyền của sàn. Seller không dùng form này nữa.</p>
     </section>
     <AdminDashboard />
   </div>
